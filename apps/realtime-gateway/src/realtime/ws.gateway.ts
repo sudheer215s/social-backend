@@ -1,4 +1,5 @@
 import type { RedisClient } from '@social/platform-redis';
+import { websocketActiveConnections } from '@social/platform-telemetry';
 import type { IncomingMessage, Server as HttpServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -113,6 +114,7 @@ async function handleConnection(
     // ack / subscribe: cursor is advanced server-side on delivery; ack is advisory
   });
 
+  websocketActiveConnections.inc(1, { transport: 'ws' });
   try {
     const reason = await runDeliverySession({
       redis: options.redis,
@@ -139,6 +141,7 @@ async function handleConnection(
       }
     }
   } finally {
+    websocketActiveConnections.dec(1, { transport: 'ws' });
     closed = true;
     if (ws.readyState === ws.OPEN) {
       ws.close(1000, 'session end');

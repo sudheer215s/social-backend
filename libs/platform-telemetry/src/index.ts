@@ -17,3 +17,12 @@ export {
   REDACTED_VALUE,
   redactSensitive,
 } from './redact';
+export {
+  Counter,
+  Gauge,
+  MetricsRegistry,
+  defaultRegistry,
+  httpRequestsTotal,
+  realtimeTicketsIssuedTotal,
+  websocketActiveConnections,
+} from './metrics';

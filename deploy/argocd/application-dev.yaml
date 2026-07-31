@@ -1,0 +1,33 @@
+# Argo CD Application — dev overlay
+# Apply after Argo CD is installed and this repo is reachable:
+#   kubectl apply -f deploy/argocd/application-dev.yaml
+#
+# Edit repoURL to your fork.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: social-backend-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sudheer215s/social-backend.git
+    targetRevision: main
+    path: deploy/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: social
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

@@ -4,6 +4,7 @@ import { HealthService } from '@social/platform-telemetry';
 import { randomUUID } from 'node:crypto';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { RealtimeController } from './realtime/realtime.controller';
 import { TicketService } from './ticket/ticket.service';
 import { INSTANCE_ID, REDIS } from './tokens';
@@ -12,7 +13,7 @@ export { INSTANCE_ID, REDIS } from './tokens';
 
 @Global()
 @Module({
-  controllers: [RealtimeController, HealthController],
+  controllers: [RealtimeController, HealthController, MetricsController],
   providers: [
     {
       provide: INSTANCE_ID,

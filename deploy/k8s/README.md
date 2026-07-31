@@ -78,11 +78,26 @@ See `overlays/prod/images-digests.example.yaml`.
 kubectl apply -k deploy/k8s/components/keda-scaling
 ```
 
-Examples scale notification/timeline on **Kafka consumer lag** and realtime on a **Prometheus** connection metric (export `websocket_active_connections` from the app when ready).
+Examples scale notification/timeline on **Kafka consumer lag** and realtime on
+`sum(websocket_active_connections)` (exported by realtime-gateway at `/metrics`).
+
+## Monitoring
+
+```bash
+pnpm k8s:monitoring
+```
+
+| Endpoint            | Service          | Metrics                                                                    |
+| ------------------- | ---------------- | -------------------------------------------------------------------------- |
+| `GET /metrics`      | realtime-gateway | `websocket_active_connections{transport}`, `realtime_tickets_issued_total` |
+| `GET /metrics`      | api-gateway      | registry ready for HTTP counters                                           |
+| `GET /health/ready` | other apps       | blackbox-style scrape via ServiceMonitor                                   |
+
+## GitOps
+
+Argo CD Applications: `deploy/argocd/` — `pnpm argocd:apply`
 
 ## NetworkPolicies / Ingress / HPA
-
-See previous sections in git history or inspect:
 
 - `networkpolicies.yaml` — default-deny + allow lists
 - `ingress.yaml` — NGINX, TLS, realtime path split
@@ -92,5 +107,4 @@ See previous sections in git history or inspect:
 
 - Service mesh mTLS
 - Infra operators (Strimzi, CloudNativePG, …)
-- Prometheus ServiceMonitors for app metrics
-- ExternalSecrets push secrets into SealedSecrets for gitops without ESO
+- Full HTTP RED metrics interceptor on all services

@@ -1,0 +1,37 @@
+# Argo CD Application — prod overlay
+# Prerequisites:
+#   - External Secrets Operator + remote secrets configured
+#   - Image tags/digests set in overlays/prod
+#   - cert-manager issuers applied
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: social-backend-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sudheer215s/social-backend.git
+    targetRevision: main
+    path: deploy/k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: social
+  syncPolicy:
+    # Manual sync for prod by default — enable automated when confident
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

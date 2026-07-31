@@ -1,0 +1,69 @@
+# Requires Prometheus Operator (ServiceMonitor CRD).
+# Labels must match your Prometheus selector (release: kube-prometheus-stack is common).
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: realtime-gateway
+  namespace: social
+  labels:
+    app: realtime-gateway
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: realtime-gateway
+  namespaceSelector:
+    matchNames: [social]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-gateway
+  namespace: social
+  labels:
+    app: api-gateway
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  namespaceSelector:
+    matchNames: [social]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: social-health
+  namespace: social
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - identity-service
+          - post-service
+          - graph-service
+          - timeline-service
+          - notification-service
+          - search-service
+  namespaceSelector:
+    matchNames: [social]
+  endpoints:
+    - port: http
+      path: /health/ready
+      interval: 30s
+      scrapeTimeout: 5s

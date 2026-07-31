@@ -47,7 +47,9 @@
     "k8s:apply:prod": "kubectl apply -k deploy/k8s/overlays/prod",
     "k8s:issuers": "kubectl apply -f deploy/k8s/cert-manager/cluster-issuers.yaml",
     "k8s:secrets:eso": "kubectl apply -k deploy/k8s/external-secrets",
-    "k8s:keda": "kubectl apply -k deploy/k8s/components/keda-scaling"
+    "k8s:keda": "kubectl apply -k deploy/k8s/components/keda-scaling",
+    "k8s:monitoring": "kubectl apply -k deploy/k8s/monitoring",
+    "argocd:apply": "kubectl apply -f deploy/argocd/application-dev.yaml -f deploy/argocd/application-prod.yaml"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

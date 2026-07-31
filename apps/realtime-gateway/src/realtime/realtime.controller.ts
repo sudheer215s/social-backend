@@ -12,6 +12,10 @@ import {
 import type { RedisClient } from '@social/platform-redis';
 import type { Response } from 'express';
 import { randomUUID } from 'node:crypto';
+import {
+  realtimeTicketsIssuedTotal,
+  websocketActiveConnections,
+} from '@social/platform-telemetry';
 import { JwtAuthGuard, type AuthedRequest } from '../auth/jwt.guard';
 import { REDIS } from '../tokens';
 import { TicketService } from '../ticket/ticket.service';
@@ -33,6 +37,7 @@ export class RealtimeController {
   @UseGuards(JwtAuthGuard)
   async issueTicket(@Req() req: AuthedRequest) {
     const result = await this.tickets.issue(req.userId!, req.sessionId ?? null);
+    realtimeTicketsIssuedTotal.inc(1);
     return {
       ticket: result.ticket,
       expiresIn: result.expiresIn,
@@ -80,6 +85,7 @@ export class RealtimeController {
       closed = true;
     });
 
+    websocketActiveConnections.inc(1, { transport: 'sse' });
     try {
       await runDeliverySession({
         redis: this.redis,
@@ -97,6 +103,7 @@ export class RealtimeController {
         evicted: evicted.length > 0,
       });
     } finally {
+      websocketActiveConnections.dec(1, { transport: 'sse' });
       closed = true;
       try {
         res.end();

@@ -16,13 +16,19 @@ import { ContentController } from './content/content.controller';
 import { AuthGuard } from './auth/auth.guard';
 import { JwtVerifier } from './auth/jwt-verifier';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { IdentityGrpcClient } from './proxy/identity.grpc.client';
 import { IdentityProxy } from './proxy/identity.proxy';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
 import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
 
 @Module({
-  controllers: [AuthController, ContentController, HealthController],
+  controllers: [
+    AuthController,
+    ContentController,
+    HealthController,
+    MetricsController,
+  ],
   providers: [
     {
       provide: REDIS,
