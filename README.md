@@ -96,12 +96,12 @@ Details and gates: [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap
 
 ## Repository status
 
-| Item                      | State                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| Architecture (v2)         | Documented and review-approved                                                   |
-| Application code          | Monorepo: `apps/hello-service` + `libs/platform-config`; more platform libs next |
-| Local multi-service stack | Planned in Phase 0                                                               |
-| Production deploy         | Not yet                                                                          |
+| Item                      | State                                                          |
+| ------------------------- | -------------------------------------------------------------- |
+| Architecture (v2)         | Documented and review-approved                                 |
+| Application code          | Monorepo: hello-service + platform-config + platform-telemetry |
+| Local multi-service stack | Planned in Phase 0                                             |
+| Production deploy         | Not yet                                                        |
 
 This is a deliberate **design-first** repo: the hard distributed-systems choices (timeline algorithm, capacity model, consistency, authz) are specified before service code lands.
 
@@ -123,7 +123,9 @@ nvm use
 
 ```bash
 pnpm install
-pnpm dev              # hello-service (watch)
+cp .env.example .env   # required for hello-service boot (validated config)
+pnpm dev               # hello-service (watch)
+# GET /  GET /health/live  GET /health/ready
 ```
 
 Other scripts (Turbo, all packages):
@@ -147,7 +149,8 @@ social-backend/
 ├── apps/
 │   └── hello-service/             # Phase 0 smoke service (Nest)
 ├── libs/
-│   └── platform-config/           # fail-fast Zod config (+ more platform-* next)
+│   ├── platform-config/           # fail-fast Zod config
+│   └── platform-telemetry/        # Pino logger, redaction, health probes
 ├── docs/                          # Architecture & roadmap (source of truth)
 ├── pnpm-workspace.yaml
 ├── turbo.json

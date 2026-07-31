@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('Hello service (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -20,10 +20,24 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  it('/ (GET)', () => {
+  it('GET / returns hello', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
       .expect('Hello World!');
+  });
+
+  it('GET /health/live is process-only ok', () => {
+    return request(app.getHttpServer())
+      .get('/health/live')
+      .expect(200)
+      .expect({ status: 'ok' });
+  });
+
+  it('GET /health/ready returns ok with empty probes', () => {
+    return request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(200)
+      .expect({ status: 'ok', checks: {} });
   });
 });

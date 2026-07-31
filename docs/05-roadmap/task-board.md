@@ -25,8 +25,8 @@ Status: `todo` | `doing` | `done` | `blocked`
 | ID         | Task                                      | Verifiable output                                                                                 | Tests                                    | Status |
 | ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------ |
 | **P0-T06** | `platform-config`                         | `loadConfig()` validates env with Zod; fail-fast on missing required; redacts secrets in `toJSON` | Unit: valid/invalid/redaction/pool cap   | `done` |
-| **P0-T07** | `platform-telemetry` (logger + redaction) | Pino JSON logger; redacts password/token/email/authorization                                      | Unit: redaction cases                    | `todo` |
-| **P0-T08** | `platform-telemetry` (health)             | `/health/live` (process only) vs `/health/ready` (deps, cached 5s)                                | Unit/integration for live vs ready split | `todo` |
+| **P0-T07** | `platform-telemetry` (logger + redaction) | Pino JSON logger; redacts password/token/email/authorization                                      | Unit: redaction cases                    | `done` |
+| **P0-T08** | `platform-telemetry` (health)             | `/health/live` (process only) vs `/health/ready` (deps, cached 5s)                                | Unit/integration for live vs ready split | `done` |
 | **P0-T09** | `platform-db` skeleton                    | Drizzle client factory; pool max ≤ 10; timeouts documented                                        | Unit: config wiring                      | `todo` |
 | **P0-T10** | `platform-grpc` skeleton                  | Client factory defaults: deadline, retry budget, breaker                                          | Unit: option defaults                    | `todo` |
 | **P0-T11** | `platform-testing` skeleton               | Shared Jest helpers; Testcontainers helper (when Docker available)                                | Unit for helpers                         | `todo` |
@@ -35,7 +35,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 | ID         | Task                                               | Verifiable output                                       | Tests                   | Status |
 | ---------- | -------------------------------------------------- | ------------------------------------------------------- | ----------------------- | ------ |
-| **P0-T12** | `hello-service` uses config + telemetry + health   | App boots only with valid env; live/ready + hello route | e2e: health endpoints   | `todo` |
+| **P0-T12** | `hello-service` uses config + telemetry + health   | App boots only with valid env; live/ready + hello route | e2e: health endpoints   | `done` |
 | **P0-T13** | Docker Compose core (Postgres + PgBouncer + Redis) | `docker compose up` healthy                             | Compose healthchecks    | `todo` |
 | **P0-T14** | Compose extended (Redpanda + ES + OTel)            | Full local stack starts                                 | Healthchecks green      | `todo` |
 | **P0-T15** | Multi-stage Dockerfile for apps                    | Image builds for `hello-service`                        | `docker build` succeeds | `todo` |
@@ -84,5 +84,6 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ## Current focus
 
-**Active:** Phase 0 Slice A–B — monorepo + `platform-config`.
-**Do not start Phase 1** until hello-service boots with validated config and health endpoints.
+**Active:** Phase 0 Slice A remaining — CI (P0-T05), then Compose (P0-T13).
+**Completed:** P0-T01–T03, P0-T06–T08, P0-T12.
+**Do not start Phase 1** until Compose + CI baseline exist (roadmap Phase 0).
