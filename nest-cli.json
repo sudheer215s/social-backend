@@ -1,8 +1,22 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/hello-service/src",
+  "monorepo": true,
+  "root": "apps/hello-service",
   "compilerOptions": {
-    "deleteOutDir": true
+    "webpack": false,
+    "tsConfigPath": "apps/hello-service/tsconfig.build.json"
+  },
+  "projects": {
+    "hello-service": {
+      "type": "application",
+      "root": "apps/hello-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/hello-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/hello-service/tsconfig.build.json"
+      }
+    }
   }
 }

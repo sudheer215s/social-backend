@@ -119,27 +119,24 @@ nvm use
 
 ---
 
-## Quick start (current scaffold)
-
-Until Phase 0 lands the monorepo and Compose stack, the repo runs as a single Nest app:
+## Quick start
 
 ```bash
 pnpm install
-pnpm run start:dev
+pnpm dev              # hello-service (watch)
 ```
 
-Other scripts:
+Other scripts (Turbo, all packages):
 
 ```bash
-pnpm run build        # compile
-pnpm run start:prod   # run dist/
-pnpm run test         # unit tests
-pnpm run test:e2e     # e2e tests
-pnpm run lint         # ESLint
-pnpm run typecheck    # tsc --noEmit
+pnpm build            # compile all packages
+pnpm test             # unit tests
+pnpm lint             # ESLint
+pnpm typecheck        # tsc --noEmit
+pnpm --filter @social/hello-service test:e2e
 ```
 
-Default Nest HTTP app listens on the usual local port after `start:dev` (see Nest docs / `src/main.ts`).
+`hello-service` listens on `PORT` (default 3000).
 
 ---
 
@@ -147,17 +144,17 @@ Default Nest HTTP app listens on the usual local port after `start:dev` (see Nes
 
 ```
 social-backend/
+├── apps/
+│   └── hello-service/             # Phase 0 smoke service (Nest)
+├── libs/                          # platform-* shared packages (in progress)
 ├── docs/                          # Architecture & roadmap (source of truth)
-├── src/                           # Nest scaffold (to become apps/ + libs/)
-├── test/                          # e2e tests
-├── twitter-linkedin-distributed-backend-design.md   # v1 (superseded)
-├── implementation-plan-8-phases.md                  # v1 plan (superseded)
+├── pnpm-workspace.yaml
+├── turbo.json
 ├── package.json
 └── README.md
 ```
 
-Target layout after Phase 0: `apps/*` services, `libs/*` platform packages, `docker/` Compose stack, CI/CD and Kubernetes manifests.
-
+Historical v1 docs remain in the repo root (superseded by `docs/`).
 ---
 
 ## Tech choices

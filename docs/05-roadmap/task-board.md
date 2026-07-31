@@ -14,7 +14,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 | ID         | Task                                        | Verifiable output                                                                      | Tests                                               | Status  |
 | ---------- | ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- | ------- |
-| **P0-T01** | Strict TypeScript baseline green            | `pnpm typecheck` + `pnpm test` pass with `strict` + `noUncheckedIndexedAccess`         | Existing unit test green; bootstrap handles promise | `doing` |
+| **P0-T01** | Strict TypeScript baseline green | `pnpm typecheck` + `pnpm test` pass with `strict` + `noUncheckedIndexedAccess` | Existing unit test green; bootstrap handles promise | `done` |
 | **P0-T02** | pnpm workspace monorepo (`apps/` + `libs/`) | `pnpm install`; hello app builds from `apps/hello-service`; workspace packages resolve | Build + unit tests from monorepo layout             | `todo`  |
 | **P0-T03** | Root tooling: Turbo, scripts, path aliases  | `pnpm turbo typecheck test lint` runs all packages                                     | CI-local script smoke                               | `todo`  |
 | **P0-T04** | ESLint boundaries + Prettier + Husky        | Lint fails on illegal cross-app imports; pre-commit runs lint-staged                   | Fixture / lint smoke                                | `todo`  |
