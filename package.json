@@ -40,7 +40,8 @@
     "dlq:list": "node scripts/dlq-inspect.mjs list",
     "dlq:redrive": "node scripts/dlq-inspect.mjs redrive",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
-    "routes:list": "node scripts/list-routes.mjs"
+    "routes:list": "node scripts/list-routes.mjs",
+    "openapi:export": "node scripts/export-openapi.mjs"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

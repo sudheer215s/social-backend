@@ -107,3 +107,6 @@ docker/data/
 # Optional local override compose / env
 docker-compose.override.yml
 compose.override.yml
+
+# Generated API inventory
+openapi.generated.json

@@ -14,7 +14,7 @@ jobs:
   static-and-unit:
     name: lint · typecheck · test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -48,3 +48,72 @@ jobs:
 
       - name: Hello service e2e
         run: pnpm --filter @social/hello-service test:e2e
+
+      - name: Route inventory + OpenAPI export
+        run: |
+          pnpm routes:list > /tmp/routes.txt
+          pnpm openapi:export -- --out=openapi.generated.json
+          test -s openapi.generated.json
+          head -5 /tmp/routes.txt
+
+  docker-images:
+    name: docker build matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: identity-service
+            pkg: '@social/identity-service'
+            port: '3001'
+            tag: social-identity:ci
+          - app: post-service
+            pkg: '@social/post-service'
+            port: '3002'
+            tag: social-post:ci
+          - app: graph-service
+            pkg: '@social/graph-service'
+            port: '3003'
+            tag: social-graph:ci
+          - app: timeline-service
+            pkg: '@social/timeline-service'
+            port: '3004'
+            tag: social-timeline:ci
+          - app: notification-service
+            pkg: '@social/notification-service'
+            port: '3005'
+            tag: social-notification:ci
+          - app: search-service
+            pkg: '@social/search-service'
+            port: '3006'
+            tag: social-search:ci
+          - app: realtime-gateway
+            pkg: '@social/realtime-gateway'
+            port: '3007'
+            tag: social-realtime:ci
+          - app: api-gateway
+            pkg: '@social/api-gateway'
+            port: '3000'
+            tag: social-gateway:ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.app }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.service
+          push: false
+          tags: ${{ matrix.tag }}
+          build-args: |
+            APP=${{ matrix.app }}
+            PKG=${{ matrix.pkg }}
+            PORT=${{ matrix.port }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}

@@ -42,6 +42,13 @@ x-common-env: &common-env
   ELASTICSEARCH_URL: http://elasticsearch:9200
   REALTIME_SERVICE_TOKEN: local-dev-realtime-token
 
+# Distroless images have no curl/wget — probe with node fetch.
+x-health-node: &health-node
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 45s
+
 services:
   identity-service:
     build:
@@ -60,6 +67,15 @@ services:
     ports:
       - '3001:3001'
       - '50051:50051'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -86,13 +102,22 @@ services:
       PORT: '3002'
     ports:
       - '3002:3002'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3002/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       pgbouncer:
         condition: service_healthy
       redpanda:
         condition: service_healthy
       identity-service:
-        condition: service_started
+        condition: service_healthy
     networks:
       - social-net
     restart: unless-stopped
@@ -112,6 +137,15 @@ services:
       PORT: '3003'
     ports:
       - '3003:3003'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3003/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -136,15 +170,24 @@ services:
       PORT: '3004'
     ports:
       - '3004:3004'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3004/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       redis:
         condition: service_healthy
       redpanda:
         condition: service_healthy
       graph-service:
-        condition: service_started
+        condition: service_healthy
       post-service:
-        condition: service_started
+        condition: service_healthy
     networks:
       - social-net
     restart: unless-stopped
@@ -164,6 +207,15 @@ services:
       PORT: '3005'
     ports:
       - '3005:3005'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3005/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -172,7 +224,7 @@ services:
       redpanda:
         condition: service_healthy
       graph-service:
-        condition: service_started
+        condition: service_healthy
     networks:
       - social-net
     restart: unless-stopped
@@ -192,6 +244,15 @@ services:
       PORT: '3006'
     ports:
       - '3006:3006'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3006/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -216,13 +277,22 @@ services:
       PORT: '3007'
     ports:
       - '3007:3007'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3007/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       redis:
         condition: service_healthy
       notification-service:
-        condition: service_started
+        condition: service_healthy
       identity-service:
-        condition: service_started
+        condition: service_healthy
     networks:
       - social-net
     restart: unless-stopped
@@ -242,21 +312,30 @@ services:
       PORT: '3000'
     ports:
       - '3000:3000'
+    healthcheck:
+      <<: *health-node
+      test:
+        [
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
     depends_on:
       identity-service:
-        condition: service_started
+        condition: service_healthy
       post-service:
-        condition: service_started
+        condition: service_healthy
       graph-service:
-        condition: service_started
+        condition: service_healthy
       timeline-service:
-        condition: service_started
+        condition: service_healthy
       notification-service:
-        condition: service_started
+        condition: service_healthy
       search-service:
-        condition: service_started
+        condition: service_healthy
       realtime-gateway:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
