@@ -42,6 +42,26 @@ describe('GraphService (integration)', () => {
     await expect(graph.isFollowing(a, b)).resolves.toBe(false);
     await expect(graph.follow(a, b)).rejects.toBeTruthy();
 
+    const blockEvents = await pool.query(
+      `SELECT event_type FROM graph.outbox
+       WHERE event_type IN ('user.blocked','user.unblocked')
+         AND payload->>'blockerId' = $1`,
+      [b],
+    );
+    expect(blockEvents.rows.some((r) => r.event_type === 'user.blocked')).toBe(
+      true,
+    );
+
+    await graph.unmute(b, a); // no-op if not muted
+    await graph.mute(b, a);
+    const muteEvents = await pool.query(
+      `SELECT event_type FROM graph.outbox
+       WHERE event_type = 'user.muted' AND payload->>'muterId' = $1`,
+      [b],
+    );
+    expect(muteEvents.rowCount ?? 0).toBeGreaterThanOrEqual(1);
+    await graph.unmute(b, a);
+
     await graph.unblock(b, a);
     await graph.follow(a, b);
     await expect(graph.isFollowing(a, b)).resolves.toBe(true);

@@ -33,7 +33,9 @@
     "dev:search": "turbo run dev --filter=@social/search-service",
     "dev:realtime": "turbo run dev --filter=@social/realtime-gateway",
     "dlq:list": "node scripts/dlq-inspect.mjs list",
-    "dlq:redrive": "node scripts/dlq-inspect.mjs redrive"
+    "dlq:redrive": "node scripts/dlq-inspect.mjs redrive",
+    "smoke:e2e": "node scripts/smoke-e2e.mjs",
+    "routes:list": "node scripts/list-routes.mjs"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

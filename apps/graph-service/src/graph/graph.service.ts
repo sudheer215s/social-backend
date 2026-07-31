@@ -122,10 +122,11 @@ export class GraphService {
       throw new BadRequestException('Cannot block yourself');
     }
     await withTransaction(this.pool, async (client) => {
-      await client.query(
+      const inserted = await client.query(
         `INSERT INTO graph.blocks (blocker_id, blocked_id)
          VALUES ($1, $2)
-         ON CONFLICT DO NOTHING`,
+         ON CONFLICT DO NOTHING
+         RETURNING blocker_id`,
         [blockerId, blockedId],
       );
       await client.query(
@@ -134,14 +135,38 @@ export class GraphService {
             OR (follower_id = $2 AND followee_id = $1)`,
         [blockerId, blockedId],
       );
+      if ((inserted.rowCount ?? 0) > 0) {
+        await appendOutbox(client, 'graph', {
+          aggregateType: 'block',
+          aggregateId: `${blockerId}:${blockedId}`,
+          eventType: 'user.blocked',
+          partitionKey: blockedId,
+          topic: GRAPH_TOPIC,
+          payload: { blockerId, blockedId },
+        });
+      }
     });
   }
 
   async unblock(blockerId: string, blockedId: string): Promise<void> {
-    await this.pool.query(
-      `DELETE FROM graph.blocks WHERE blocker_id = $1 AND blocked_id = $2`,
-      [blockerId, blockedId],
-    );
+    await withTransaction(this.pool, async (client) => {
+      const deleted = await client.query(
+        `DELETE FROM graph.blocks
+         WHERE blocker_id = $1 AND blocked_id = $2
+         RETURNING blocker_id`,
+        [blockerId, blockedId],
+      );
+      if ((deleted.rowCount ?? 0) > 0) {
+        await appendOutbox(client, 'graph', {
+          aggregateType: 'block',
+          aggregateId: `${blockerId}:${blockedId}`,
+          eventType: 'user.unblocked',
+          partitionKey: blockedId,
+          topic: GRAPH_TOPIC,
+          payload: { blockerId, blockedId },
+        });
+      }
+    });
   }
 
   async isFollowing(followerId: string, followeeId: string): Promise<boolean> {
@@ -178,19 +203,46 @@ export class GraphService {
     if (muterId === mutedId) {
       throw new BadRequestException('Cannot mute yourself');
     }
-    await this.pool.query(
-      `INSERT INTO graph.mutes (muter_id, muted_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
-      [muterId, mutedId],
-    );
+    await withTransaction(this.pool, async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO graph.mutes (muter_id, muted_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING
+         RETURNING muter_id`,
+        [muterId, mutedId],
+      );
+      if ((inserted.rowCount ?? 0) > 0) {
+        await appendOutbox(client, 'graph', {
+          aggregateType: 'mute',
+          aggregateId: `${muterId}:${mutedId}`,
+          eventType: 'user.muted',
+          partitionKey: muterId,
+          topic: GRAPH_TOPIC,
+          payload: { muterId, mutedId },
+        });
+      }
+    });
   }
 
   async unmute(muterId: string, mutedId: string): Promise<void> {
-    await this.pool.query(
-      `DELETE FROM graph.mutes WHERE muter_id = $1 AND muted_id = $2`,
-      [muterId, mutedId],
-    );
+    await withTransaction(this.pool, async (client) => {
+      const deleted = await client.query(
+        `DELETE FROM graph.mutes
+         WHERE muter_id = $1 AND muted_id = $2
+         RETURNING muter_id`,
+        [muterId, mutedId],
+      );
+      if ((deleted.rowCount ?? 0) > 0) {
+        await appendOutbox(client, 'graph', {
+          aggregateType: 'mute',
+          aggregateId: `${muterId}:${mutedId}`,
+          eventType: 'user.unmuted',
+          partitionKey: muterId,
+          topic: GRAPH_TOPIC,
+          payload: { muterId, mutedId },
+        });
+      }
+    });
   }
 
   async listMutedIds(muterId: string): Promise<string[]> {
