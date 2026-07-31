@@ -99,7 +99,7 @@ Details and gates: [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap
 | Item                      | State                                                          |
 | ------------------------- | -------------------------------------------------------------- |
 | Architecture (v2)         | Documented and review-approved                                 |
-| Application code          | Monorepo: hello-service + platform-config + platform-telemetry |
+| Application code          | Monorepo: hello-service + platform-config/telemetry/db/grpc    |
 | Local multi-service stack | Compose core up (Postgres + PgBouncer + Redis)                 |
 | Production deploy         | Not yet                                                        |
 
@@ -137,6 +137,7 @@ pnpm test             # unit tests
 pnpm lint             # ESLint
 pnpm typecheck        # tsc --noEmit
 pnpm --filter @social/hello-service test:e2e
+pnpm --filter @social/platform-db test:integration  # needs compose:up
 ```
 
 `hello-service` listens on `PORT` (default 3000).
@@ -151,7 +152,9 @@ social-backend/
 │   └── hello-service/             # Phase 0 smoke service (Nest)
 ├── libs/
 │   ├── platform-config/           # fail-fast Zod config
-│   └── platform-telemetry/        # Pino logger, redaction, health probes
+│   ├── platform-telemetry/        # Pino logger, redaction, health probes
+│   ├── platform-db/               # pg pool, Drizzle, transactions
+│   └── platform-grpc/             # client policy defaults (retry budget)
 ├── docker/                        # Compose: Postgres, PgBouncer, Redis
 ├── .github/workflows/ci.yml       # lint · typecheck · test · build · e2e
 ├── docs/                          # Architecture & roadmap (source of truth)

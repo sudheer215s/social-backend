@@ -27,8 +27,8 @@ Status: `todo` | `doing` | `done` | `blocked`
 | **P0-T06** | `platform-config`                         | `loadConfig()` validates env with Zod; fail-fast on missing required; redacts secrets in `toJSON` | Unit: valid/invalid/redaction/pool cap   | `done` |
 | **P0-T07** | `platform-telemetry` (logger + redaction) | Pino JSON logger; redacts password/token/email/authorization                                      | Unit: redaction cases                    | `done` |
 | **P0-T08** | `platform-telemetry` (health)             | `/health/live` (process only) vs `/health/ready` (deps, cached 5s)                                | Unit/integration for live vs ready split | `done` |
-| **P0-T09** | `platform-db` skeleton                    | Drizzle client factory; pool max ≤ 10; timeouts documented                                        | Unit: config wiring                      | `todo` |
-| **P0-T10** | `platform-grpc` skeleton                  | Client factory defaults: deadline, retry budget, breaker                                          | Unit: option defaults                    | `todo` |
+| **P0-T09** | `platform-db` skeleton                    | Drizzle client factory; pool max ≤ 10; timeouts documented                                        | Unit: config wiring                      | `done` |
+| **P0-T10** | `platform-grpc` skeleton                  | Client factory defaults: deadline, retry budget, breaker                                          | Unit: option defaults                    | `done` |
 | **P0-T11** | `platform-testing` skeleton               | Shared Jest helpers; Testcontainers helper (when Docker available)                                | Unit for helpers                         | `todo` |
 
 ### Slice C — Hello service + local stack
@@ -84,6 +84,6 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ## Current focus
 
-**Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel) or P0-T09 (`platform-db`).
-**Completed:** P0-T01–T03, P0-T05–T08, P0-T12–T13.
+**Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel), P0-T11 (platform-testing), P0-T15 (Dockerfile).
+**Completed:** P0-T01–T03, P0-T05–T10, P0-T12–T13.
 

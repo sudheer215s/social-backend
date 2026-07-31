@@ -2,7 +2,7 @@
   "name": "social-backend",
   "version": "0.0.1",
   "private": true,
-  "description": "Distributed Social Media Backend — NestJS monorepo",
+  "description": "Distributed Social Media Backend \u2014 NestJS monorepo",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.0.0"
@@ -20,7 +20,8 @@
     "compose:up": "docker compose -f docker/docker-compose.yml up -d",
     "compose:down": "docker compose -f docker/docker-compose.yml down",
     "compose:ps": "docker compose -f docker/docker-compose.yml ps",
-    "compose:check": "bash scripts/check-compose.sh"
+    "compose:check": "bash scripts/check-compose.sh",
+    "test:integration": "pnpm --filter @social/platform-db test:integration"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
