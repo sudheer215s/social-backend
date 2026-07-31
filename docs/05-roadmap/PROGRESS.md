@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-31  
 **Repo:** https://github.com/sudheer215s/social-backend  
 **Branch:** `main`  
-**HEAD:** see tip of `main` after latest push (updated in post-commit note below)
+**HEAD:** `0ebb23e` — feat(P0-T11/T15): platform-testing helpers and hello Dockerfile
 
 This file is the **living session handoff**. Update it at the end of every
 task loop (see [`WORKFLOW.md`](./WORKFLOW.md)).
