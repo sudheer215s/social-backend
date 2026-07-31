@@ -1,0 +1,69 @@
+# Lower default replicas for local clusters (HPA still present).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-service
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graph-service
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timeline-service
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime-gateway
+  namespace: social
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: social
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: app
+          imagePullPolicy: IfNotPresent

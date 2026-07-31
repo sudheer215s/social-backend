@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: social
+resources:
+  - ../../
+labels:
+  - pairs:
+      environment: prod
+    includeSelectors: false
+# Point these at your registry + immutable tags/digests before apply.
+images:
+  - name: social-identity
+    newName: ghcr.io/example/social-identity
+    newTag: '1.0.0'
+  - name: social-post
+    newName: ghcr.io/example/social-post
+    newTag: '1.0.0'
+  - name: social-graph
+    newName: ghcr.io/example/social-graph
+    newTag: '1.0.0'
+  - name: social-timeline
+    newName: ghcr.io/example/social-timeline
+    newTag: '1.0.0'
+  - name: social-notification
+    newName: ghcr.io/example/social-notification
+    newTag: '1.0.0'
+  - name: social-search
+    newName: ghcr.io/example/social-search
+    newTag: '1.0.0'
+  - name: social-realtime
+    newName: ghcr.io/example/social-realtime
+    newTag: '1.0.0'
+  - name: social-gateway
+    newName: ghcr.io/example/social-gateway
+    newTag: '1.0.0'
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+  - path: ingress-cert-manager.yaml
+  - path: config-issuer-host.yaml

@@ -9,3 +9,8 @@ resources:
   - hpa.yaml
   - pdb.yaml
   - ingress.yaml
+  - networkpolicies.yaml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: social-backend
+    includeSelectors: false

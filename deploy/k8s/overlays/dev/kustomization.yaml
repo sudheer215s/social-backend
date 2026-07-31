@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: social
+resources:
+  - ../../
+labels:
+  - pairs:
+      environment: dev
+    includeSelectors: false
+images:
+  - name: social-identity
+    newTag: local
+  - name: social-post
+    newTag: local
+  - name: social-graph
+    newTag: local
+  - name: social-timeline
+    newTag: local
+  - name: social-notification
+    newTag: local
+  - name: social-search
+    newTag: local
+  - name: social-realtime
+    newTag: local
+  - name: social-gateway
+    newTag: local
+patches:
+  - path: ingress-host.yaml
+  - path: scale-down.yaml
+  - path: hpa-dev.yaml

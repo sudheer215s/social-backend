@@ -1,0 +1,105 @@
+# Zero-trust-ish defaults for the social namespace.
+# - Deny all ingress by default
+# - Allow pod-to-pod inside the namespace
+# - Allow Ingress Controller → api-gateway + realtime-gateway
+# - Allow DNS egress
+# - Allow common data-plane egress ports (override for locked-down prod)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: social
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Intra-namespace: any social pod may talk to any other social pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: social
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+# DNS (CoreDNS in kube-system — adjust if your cluster differs)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: social
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Ingress NGINX → edge services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-nginx
+  namespace: social
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [api-gateway, realtime-gateway]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - { protocol: TCP, port: 3000 }
+        - { protocol: TCP, port: 3007 }
+---
+# Data-plane egress (in-cluster or managed peers on standard ports).
+# Tighten to specific CIDRs / namespaces when infra is known.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-data-plane-egress
+  namespace: social
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        # Postgres / PgBouncer
+        - { protocol: TCP, port: 5432 }
+        - { protocol: TCP, port: 6432 }
+        # Redis
+        - { protocol: TCP, port: 6379 }
+        # Kafka
+        - { protocol: TCP, port: 9092 }
+        - { protocol: TCP, port: 19092 }
+        # Elasticsearch
+        - { protocol: TCP, port: 9200 }
+        # OTLP
+        - { protocol: TCP, port: 4317 }
+        - { protocol: TCP, port: 4318 }
+        # HTTPS (JWKS fallback, external APIs, package health — optional)
+        - { protocol: TCP, port: 443 }

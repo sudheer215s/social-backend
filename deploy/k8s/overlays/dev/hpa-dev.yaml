@@ -1,0 +1,26 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway
+  namespace: social
+spec:
+  minReplicas: 1
+  maxReplicas: 3
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: realtime-gateway
+  namespace: social
+spec:
+  minReplicas: 1
+  maxReplicas: 3
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: identity-service
+  namespace: social
+spec:
+  minReplicas: 1
+  maxReplicas: 3

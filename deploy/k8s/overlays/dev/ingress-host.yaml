@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: social-api
+  namespace: social
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: 'false'
+spec:
+  rules:
+    - host: api.social.local
+      http:
+        paths:
+          - path: /v1/realtime/stream
+            pathType: Prefix
+            backend:
+              service:
+                name: realtime-gateway
+                port: { number: 3007 }
+          - path: /v1/realtime/ws
+            pathType: Prefix
+            backend:
+              service:
+                name: realtime-gateway
+                port: { number: 3007 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port: { number: 3000 }
+  tls:
+    - hosts:
+        - api.social.local
+      secretName: social-tls

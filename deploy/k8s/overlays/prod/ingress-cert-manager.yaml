@@ -1,0 +1,8 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: social-api
+  namespace: social
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
