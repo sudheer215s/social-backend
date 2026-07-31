@@ -86,5 +86,4 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 **Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel) or P0-T09 (`platform-db`).
 **Completed:** P0-T01–T03, P0-T05–T08, P0-T12–T13.
-**Completed:** P0-T01–T03, P0-T06–T08, P0-T12.
-**Do not start Phase 1** until Compose + CI baseline exist (roadmap Phase 0).
+
