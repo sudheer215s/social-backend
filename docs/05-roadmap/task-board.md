@@ -12,19 +12,19 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ### Slice A — Repo & toolchain
 
-| ID         | Task                                        | Verifiable output                                                                      | Tests                                               | Status  |
-| ---------- | ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- | ------- |
-| **P0-T01** | Strict TypeScript baseline green | `pnpm typecheck` + `pnpm test` pass with `strict` + `noUncheckedIndexedAccess` | Existing unit test green; bootstrap handles promise | `done` |
-| **P0-T02** | pnpm workspace monorepo (`apps/` + `libs/`) | `pnpm install`; hello app builds from `apps/hello-service`; workspace packages resolve | Build + unit tests from monorepo layout             | `todo`  |
-| **P0-T03** | Root tooling: Turbo, scripts, path aliases  | `pnpm turbo typecheck test lint` runs all packages                                     | CI-local script smoke                               | `todo`  |
-| **P0-T04** | ESLint boundaries + Prettier + Husky        | Lint fails on illegal cross-app imports; pre-commit runs lint-staged                   | Fixture / lint smoke                                | `todo`  |
-| **P0-T05** | GitHub Actions CI (static + unit)           | Workflow on PR/main: install, lint, typecheck, test                                    | Workflow present; local equivalent scripts          | `todo`  |
+| ID         | Task                                        | Verifiable output                                                                      | Tests                                               | Status |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- | ------ |
+| **P0-T01** | Strict TypeScript baseline green            | `pnpm typecheck` + `pnpm test` pass with `strict` + `noUncheckedIndexedAccess`         | Existing unit test green; bootstrap handles promise | `done` |
+| **P0-T02** | pnpm workspace monorepo (`apps/` + `libs/`) | `pnpm install`; hello app builds from `apps/hello-service`; workspace packages resolve | Build + unit tests from monorepo layout             | `done` |
+| **P0-T03** | Root tooling: Turbo, scripts, path aliases  | `pnpm turbo typecheck test lint` runs all packages                                     | CI-local script smoke                               | `done` |
+| **P0-T04** | ESLint boundaries + Prettier + Husky        | Lint fails on illegal cross-app imports; pre-commit runs lint-staged                   | Fixture / lint smoke                                | `todo` |
+| **P0-T05** | GitHub Actions CI (static + unit)           | Workflow on PR/main: install, lint, typecheck, test                                    | Workflow present; local equivalent scripts          | `todo` |
 
 ### Slice B — Platform libraries (core)
 
 | ID         | Task                                      | Verifiable output                                                                                 | Tests                                    | Status |
 | ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------ |
-| **P0-T06** | `platform-config`                         | `loadConfig()` validates env with Zod; fail-fast on missing required; redacts secrets in `toJSON` | Unit: valid/invalid/redaction/pool cap   | `todo` |
+| **P0-T06** | `platform-config`                         | `loadConfig()` validates env with Zod; fail-fast on missing required; redacts secrets in `toJSON` | Unit: valid/invalid/redaction/pool cap   | `done` |
 | **P0-T07** | `platform-telemetry` (logger + redaction) | Pino JSON logger; redacts password/token/email/authorization                                      | Unit: redaction cases                    | `todo` |
 | **P0-T08** | `platform-telemetry` (health)             | `/health/live` (process only) vs `/health/ready` (deps, cached 5s)                                | Unit/integration for live vs ready split | `todo` |
 | **P0-T09** | `platform-db` skeleton                    | Drizzle client factory; pool max ≤ 10; timeouts documented                                        | Unit: config wiring                      | `todo` |
