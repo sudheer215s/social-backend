@@ -31,6 +31,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CounterService } from './counters/counter.service';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { ConsoleEmailAdapter } from './email/console-email.adapter';
+import { ErasureWorker, startErasureWorker } from './erasure/erasure.worker';
 import { HealthController } from './health.controller';
 import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
 import { SessionService } from './tokens/session.service';
@@ -143,6 +144,11 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
       useFactory: (pool: Pool) => new CounterService(pool),
     },
     {
+      provide: ErasureWorker,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new ErasureWorker(pool),
+    },
+    {
       provide: JwtKeyRing,
       inject: [JWT_KEYS],
       useFactory: (keys: JwtKeyRing) => keys,
@@ -163,17 +169,31 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   private counterConsumer: Consumer | undefined;
   private stopRelay: (() => void) | undefined;
   private stopCounter: (() => Promise<void>) | undefined;
+  private stopErasure: (() => void) | undefined;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(REDIS) private readonly redis: RedisClient | null,
     @Inject(CounterService) private readonly counters: CounterService,
+    @Inject(ErasureWorker) private readonly erasure: ErasureWorker,
   ) {}
 
   async onModuleInit(): Promise<void> {
     if (process.env.IDENTITY_SKIP_MIGRATE !== '1') {
       await applyMigrations(this.pool, defaultMigrationsDir());
     }
+
+    if (process.env.ERASURE_WORKER_DISABLED !== '1') {
+      this.stopErasure = startErasureWorker({
+        worker: this.erasure,
+        intervalMs: Number(process.env.ERASURE_WORKER_INTERVAL_MS ?? 60_000),
+        onError: (err) => {
+          // eslint-disable-next-line no-console
+          console.error('[erasure-worker]', err);
+        },
+      }).stop;
+    }
+
     if (process.env.KAFKA_DISABLED === '1') {
       return;
     }
@@ -202,7 +222,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
       this.stopCounter = await startReliableConsumer({
         consumer: this.counterConsumer,
         producer: this.producer,
-        topics: ['social.graph.v1'],
+        topics: ['social.graph.v1', 'social.post.v1'],
         consumerGroup: 'identity-counters',
         handler: async (envelope) => {
           await this.counters.processDomainEvent({
@@ -230,6 +250,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.stopErasure?.();
     this.stopRelay?.();
     if (this.stopCounter) await this.stopCounter();
     if (this.producer) {

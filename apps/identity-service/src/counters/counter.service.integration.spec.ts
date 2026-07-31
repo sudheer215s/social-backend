@@ -82,4 +82,26 @@ describe('CounterService (integration)', () => {
       payload: { followerId: follower, followeeId: followee },
     });
   });
+
+  it('adjusts post_count on post.created and post.deleted', async () => {
+    if (!available) return;
+    const author = followee;
+    const created = await svc.processDomainEvent({
+      eventId: uuidv7(),
+      eventType: 'post.created',
+      payload: { postId: uuidv7(), authorId: author },
+    });
+    expect(created).toBe('handled');
+    const after = await pool.query<{ pc: string }>(
+      `SELECT post_count::text AS pc FROM identity.users WHERE id = $1`,
+      [author],
+    );
+    expect(Number(after.rows[0]!.pc)).toBeGreaterThanOrEqual(1);
+
+    await svc.processDomainEvent({
+      eventId: uuidv7(),
+      eventType: 'post.deleted',
+      payload: { postId: uuidv7(), authorId: author },
+    });
+  });
 });

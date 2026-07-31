@@ -129,4 +129,23 @@ export class GraphController {
   async mutedIdsInternal(@Param('userId') userId: string) {
     return { ids: await this.graph.listMutedIds(userId) };
   }
+
+  /**
+   * Notification suppress check: block either way or mute.
+   * Query: viewerId, actorId
+   */
+  @Get('relationship/suppress-notification')
+  async suppressNotification(
+    @Query('viewerId') viewerId: string,
+    @Query('actorId') actorId: string,
+  ) {
+    if (!viewerId || !actorId) {
+      return { suppress: false };
+    }
+    const suppress = await this.graph.shouldSuppressNotification(
+      viewerId,
+      actorId,
+    );
+    return { suppress };
+  }
 }

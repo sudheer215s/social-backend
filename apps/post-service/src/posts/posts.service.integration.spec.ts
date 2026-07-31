@@ -58,5 +58,12 @@ describe('PostsService (integration)', () => {
 
     await posts.softDelete(created.id, authorId);
     await expect(posts.getById(created.id)).rejects.toBeTruthy();
+
+    const delOutbox = await pool.query<{ c: string }>(
+      `SELECT count(*)::text AS c FROM post.outbox
+       WHERE aggregate_id = $1 AND event_type = 'post.deleted'`,
+      [created.id],
+    );
+    expect(Number(delOutbox.rows[0]?.c ?? 0)).toBe(1);
   });
 });

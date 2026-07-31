@@ -134,23 +134,37 @@ export class PostsService {
   }
 
   async softDelete(postId: string, userId: string): Promise<void> {
-    const result = await this.pool.query(
-      `UPDATE post.posts
-       SET deleted_at = now(), deleted_by = 'author'
-       WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL
-       RETURNING id`,
-      [postId, userId],
-    );
-    if ((result.rowCount ?? 0) === 0) {
-      const exists = await this.pool.query(
-        `SELECT author_id FROM post.posts WHERE id = $1`,
-        [postId],
+    await withTransaction(this.pool, async (client) => {
+      const result = await client.query<{ id: string; author_id: string }>(
+        `UPDATE post.posts
+         SET deleted_at = now(), deleted_by = 'author'
+         WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL
+         RETURNING id, author_id`,
+        [postId, userId],
       );
-      if ((exists.rowCount ?? 0) === 0) {
-        throw new NotFoundException('Post not found');
+      if ((result.rowCount ?? 0) === 0) {
+        const exists = await client.query(
+          `SELECT author_id FROM post.posts WHERE id = $1`,
+          [postId],
+        );
+        if ((exists.rowCount ?? 0) === 0) {
+          throw new NotFoundException('Post not found');
+        }
+        throw new ForbiddenException('Not the author');
       }
-      throw new ForbiddenException('Not the author');
-    }
+      const row = result.rows[0]!;
+      await appendOutbox(client, 'post', {
+        aggregateType: 'post',
+        aggregateId: postId,
+        eventType: 'post.deleted',
+        partitionKey: row.author_id,
+        topic: POST_TOPIC,
+        payload: {
+          postId,
+          authorId: row.author_id,
+        },
+      });
+    });
   }
 
   async like(postId: string, userId: string): Promise<PostDto> {

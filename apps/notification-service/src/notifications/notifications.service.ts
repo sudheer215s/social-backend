@@ -28,11 +28,16 @@ export interface NotificationDto {
 @Injectable()
 export class NotificationsService {
   private readonly log = new Logger(NotificationsService.name);
+  private readonly graphBaseUrl: string;
 
   constructor(
     private readonly pool: Pool,
     private readonly redis: RedisClient | null = null,
-  ) {}
+    graphBaseUrl?: string,
+  ) {
+    this.graphBaseUrl =
+      graphBaseUrl ?? process.env.GRAPH_BASE_URL ?? 'http://127.0.0.1:3003';
+  }
 
   async processDomainEvent(input: {
     eventId: string;
@@ -55,6 +60,12 @@ export class NotificationsService {
       }
 
       if (mapped.actorId === mapped.recipientId) {
+        return { status: 'skipped' as const };
+      }
+
+      // Suppress for block (either direction) or mute — still dedupe so
+      // preference/relationship decisions are durable on replay.
+      if (await this.shouldSuppress(mapped.recipientId, mapped.actorId)) {
         return { status: 'skipped' as const };
       }
 
@@ -168,6 +179,31 @@ export class NotificationsService {
       [userId, ids.slice(0, 100)],
     );
     return (rows.rows as NotifRow[]).map(mapRow);
+  }
+
+  /**
+   * Fail open if graph is down (still deliver) — design: degradation over silent drop
+   * for relationship checks that are best-effort at write time; blocks still apply
+   * at timeline hydration. Prefer fail-closed for *known* suppress.
+   */
+  private async shouldSuppress(
+    recipientId: string,
+    actorId: string,
+  ): Promise<boolean> {
+    try {
+      const q = new URLSearchParams({
+        viewerId: recipientId,
+        actorId,
+      });
+      const res = await fetch(
+        `${this.graphBaseUrl}/v1/graph/relationship/suppress-notification?${q}`,
+      );
+      if (!res.ok) return false;
+      const json = (await res.json()) as { suppress?: boolean };
+      return json.suppress === true;
+    } catch {
+      return false;
+    }
   }
 }
 

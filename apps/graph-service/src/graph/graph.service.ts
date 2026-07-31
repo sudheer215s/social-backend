@@ -200,4 +200,27 @@ export class GraphService {
     );
     return rows.rows.map((r) => r.muted_id);
   }
+
+  /**
+   * Whether notifications from actor → viewer should be suppressed
+   * (block either direction, or viewer muted actor).
+   */
+  async shouldSuppressNotification(
+    viewerId: string,
+    actorId: string,
+  ): Promise<boolean> {
+    if (viewerId === actorId) return true;
+    const r = await this.pool.query(
+      `SELECT 1 WHERE EXISTS (
+         SELECT 1 FROM graph.blocks
+         WHERE (blocker_id = $1 AND blocked_id = $2)
+            OR (blocker_id = $2 AND blocked_id = $1)
+       ) OR EXISTS (
+         SELECT 1 FROM graph.mutes
+         WHERE muter_id = $1 AND muted_id = $2
+       )`,
+      [viewerId, actorId],
+    );
+    return (r.rowCount ?? 0) > 0;
+  }
 }
