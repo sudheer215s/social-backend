@@ -25,10 +25,6 @@ import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
   controllers: [AuthController, ContentController, HealthController],
   providers: [
     {
-      provide: HealthService,
-      useFactory: () => new HealthService({ probes: [] }),
-    },
-    {
       provide: REDIS,
       useFactory: (): RedisClient | null => {
         if (process.env.REDIS_DISABLED === '1') {
@@ -42,6 +38,27 @@ import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
           return null;
         }
       },
+    },
+    {
+      provide: HealthService,
+      inject: [REDIS],
+      useFactory: (redis: RedisClient | null) =>
+        new HealthService({
+          probes: [
+            {
+              name: 'redis',
+              check: async () => {
+                // Memory fallbacks exist when redis is absent; only probe if connected.
+                if (!redis) return true;
+                try {
+                  return (await redis.ping()) === 'PONG';
+                } catch {
+                  return false;
+                }
+              },
+            },
+          ],
+        }),
     },
     {
       provide: SID_REVOCATION,

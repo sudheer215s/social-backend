@@ -80,3 +80,8 @@ export class HealthService {
     this.cachedReady = undefined;
   }
 }
+
+/** HTTP status for readiness: unavailable → 503, else 200 (incl. degraded). */
+export function readyHttpStatus(result: ReadyResult): number {
+  return result.status === 'unavailable' ? 503 : 200;
+}

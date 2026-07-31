@@ -46,7 +46,22 @@ export const TIMELINE_STORE = Symbol('TIMELINE_STORE');
     },
     {
       provide: HealthService,
-      useFactory: () => new HealthService({ probes: [] }),
+      inject: [REDIS],
+      useFactory: (redis: RedisClient) =>
+        new HealthService({
+          probes: [
+            {
+              name: 'redis',
+              check: async () => {
+                try {
+                  return (await redis.ping()) === 'PONG';
+                } catch {
+                  return false;
+                }
+              },
+            },
+          ],
+        }),
     },
     JwtAuthGuard,
   ],

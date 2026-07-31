@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
-import { HealthService } from '@social/platform-telemetry';
+import { Controller, Get, Res } from '@nestjs/common';
+import type { Response } from 'express';
+import { HealthService, readyHttpStatus } from '@social/platform-telemetry';
 
 @Controller('health')
 export class HealthController {
@@ -11,8 +12,9 @@ export class HealthController {
   }
 
   @Get('ready')
-  ready() {
-    // Gateway is ready if process is up; upstream probes come later.
-    return this.health.ready();
+  async ready(@Res({ passthrough: true }) res: Response) {
+    const result = await this.health.ready();
+    res.status(readyHttpStatus(result));
+    return result;
   }
 }

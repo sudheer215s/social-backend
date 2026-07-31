@@ -5,6 +5,7 @@ export {
 } from './logger';
 export {
   HealthService,
+  readyHttpStatus,
   type DependencyProbe,
   type HealthServiceOptions,
   type HealthStatus,

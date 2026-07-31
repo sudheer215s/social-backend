@@ -1,6 +1,6 @@
-import { Controller, Get, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { HealthService } from '@social/platform-telemetry';
+import { HealthService, readyHttpStatus } from '@social/platform-telemetry';
 
 @Controller('health')
 export class HealthController {
@@ -12,12 +12,9 @@ export class HealthController {
   }
 
   @Get('ready')
-  @HttpCode(HttpStatus.OK)
   async ready(@Res({ passthrough: true }) res: Response) {
     const result = await this.health.ready();
-    if (result.status === 'unavailable') {
-      res.status(HttpStatus.SERVICE_UNAVAILABLE);
-    }
+    res.status(readyHttpStatus(result));
     return result;
   }
 }

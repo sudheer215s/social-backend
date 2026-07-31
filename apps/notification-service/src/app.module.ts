@@ -55,10 +55,23 @@ const CONSUMER_GROUP = 'notification-processor';
     },
     {
       provide: HealthService,
-      inject: [PG_POOL],
-      useFactory: (pool: Pool) =>
+      inject: [PG_POOL, REDIS],
+      useFactory: (pool: Pool, redis: RedisClient | null) =>
         new HealthService({
-          probes: [{ name: 'postgres', check: () => checkDatabase(pool) }],
+          probes: [
+            { name: 'postgres', check: () => checkDatabase(pool) },
+            {
+              name: 'redis',
+              check: async () => {
+                if (!redis) return process.env.REDIS_DISABLED === '1';
+                try {
+                  return (await redis.ping()) === 'PONG';
+                } catch {
+                  return false;
+                }
+              },
+            },
+          ],
         }),
     },
     {

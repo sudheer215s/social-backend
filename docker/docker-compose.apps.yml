@@ -74,7 +74,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3001/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       pgbouncer:
@@ -109,7 +109,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3002/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       pgbouncer:
@@ -144,7 +144,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3003/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3003/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       pgbouncer:
@@ -177,7 +177,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3004/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3004/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       redis:
@@ -214,7 +214,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3005/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3005/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       pgbouncer:
@@ -251,7 +251,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3006/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3006/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       elasticsearch:
@@ -284,7 +284,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3007/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3007/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       redis:
@@ -319,7 +319,7 @@ services:
           'CMD',
           '/nodejs/bin/node',
           '-e',
-          "fetch('http://127.0.0.1:3000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
     depends_on:
       identity-service:

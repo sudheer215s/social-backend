@@ -31,6 +31,32 @@ export async function createConsumer(
   return consumer;
 }
 
+/**
+ * Lightweight broker reachability for readiness probes.
+ * Returns true when KAFKA_DISABLED=1 (async plane intentionally off).
+ */
+export async function checkKafka(
+  clientId = 'health-check',
+  brokers?: string[],
+): Promise<boolean> {
+  if (process.env.KAFKA_DISABLED === '1') return true;
+  const kafka = createKafka(clientId, brokers);
+  const admin = kafka.admin();
+  try {
+    await admin.connect();
+    await admin.describeCluster();
+    return true;
+  } catch {
+    return false;
+  } finally {
+    try {
+      await admin.disconnect();
+    } catch {
+      // ignore
+    }
+  }
+}
+
 export function toEnvelope(event: OutboxEvent): DomainEventEnvelope {
   return {
     eventId: event.id,

@@ -1,4 +1,4 @@
-import { HealthService } from './health';
+import { HealthService, readyHttpStatus } from './health';
 
 describe('HealthService', () => {
   it('live is always ok and does not call dependency probes', () => {
@@ -94,5 +94,15 @@ describe('HealthService', () => {
     now = 1_000 + 5_000;
     await health.ready();
     expect(calls).toBe(2);
+  });
+
+  it('readyHttpStatus maps unavailable to 503', () => {
+    expect(readyHttpStatus({ status: 'ok', checks: {} })).toBe(200);
+    expect(
+      readyHttpStatus({ status: 'degraded', checks: { db: 'down' } }),
+    ).toBe(200);
+    expect(
+      readyHttpStatus({ status: 'unavailable', checks: { db: 'down' } }),
+    ).toBe(503);
   });
 });

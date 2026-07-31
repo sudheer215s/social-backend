@@ -18,6 +18,7 @@ export {
   type OutboxStats,
 } from './outbox';
 export {
+  checkKafka,
   createConsumer,
   createKafka,
   createProducer,
