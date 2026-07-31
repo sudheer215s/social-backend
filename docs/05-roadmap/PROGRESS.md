@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-31
 **Repo:** https://github.com/sudheer215s/social-backend
 **Branch:** `main`
-**HEAD:** `a9e5a01` — feat(P0-T09/T10): add platform-db and platform-grpc skeletons
+**HEAD:** `2b98b29` — docs: codify TDD workflow and progress memory
 
 This file is the **living session handoff**. Update it at the end of every
 task loop (see [`WORKFLOW.md`](./WORKFLOW.md)).
@@ -121,4 +121,4 @@ pnpm test:integration   # platform-db via PgBouncer
 - Established monorepo, CI, Compose core, platform-config/telemetry/db/grpc, hello-service health.
 - User required: autonomous edits/commands (always-approve); **no backdated commits**.
 - User required workflow: **task → test → code & build → test → review → commit**.
-- Added `WORKFLOW.md` + this `PROGRESS.md` as durable progress memory.
+- Added `WORKFLOW.md` + this `PROGRESS.md` + `AGENTS.md` as durable progress memory (`2b98b29`).
