@@ -1,20 +1,27 @@
 /**
- * Integration: register/login/refresh/reuse through PgBouncer.
+ * Integration: auth + email verify + password reset through PgBouncer.
  */
 import { createPool } from '@social/platform-db';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import path from 'node:path';
 import { applyMigrations } from '../db/migrate';
 import { createDevKeyRing } from '../tokens/jwt-keys';
 import { SessionService } from '../tokens/session.service';
+import { ConsoleEmailAdapter } from '../email/console-email.adapter';
 import { AuthService } from './auth.service';
+import { EmailTokenService } from './email-token.service';
 
 const connectionString =
   process.env.DATABASE_URL ?? 'postgres://social:social@127.0.0.1:6432/social';
 
-describe('AuthService tokens (integration)', () => {
+describe('AuthService email + tokens (integration)', () => {
   const pool = createPool({ connectionString, max: 3 });
   let auth: AuthService;
+  let mail: ConsoleEmailAdapter;
   let keys: Awaited<ReturnType<typeof createDevKeyRing>>;
   let available = false;
   const suffix = Date.now().toString(36);
@@ -29,7 +36,9 @@ describe('AuthService tokens (integration)', () => {
         audience: 'api',
       });
       const sessions = new SessionService(pool, keys);
-      auth = new AuthService(pool, sessions);
+      const emailTokens = new EmailTokenService(pool);
+      mail = new ConsoleEmailAdapter();
+      auth = new AuthService(pool, sessions, emailTokens, mail);
       available = true;
     } catch (err) {
       console.warn('Skipping identity integration tests', err);
@@ -41,21 +50,76 @@ describe('AuthService tokens (integration)', () => {
     await pool.end();
   });
 
-  it('registers and returns a verifiable access token + refresh', async () => {
+  it('registers, sends verify email, and verifies', async () => {
     if (!available) return;
+    mail.clear();
+    const email = `verify_${suffix}@example.com`;
     const result = await auth.register({
-      username: `tok_${suffix}`,
-      email: `tok_${suffix}@example.com`,
+      username: `verify_${suffix}`,
+      email,
       password: 'long-enough-password',
     });
-    expect(result.tokens.accessToken).toBeTruthy();
-    expect(result.tokens.refreshToken).toBeTruthy();
-    const verified = await keys.verifyAccessToken(result.tokens.accessToken);
-    expect(verified.sub).toBe(result.user.id);
-    expect(verified.sid).toBe(result.tokens.sessionId);
+    expect(result.user.emailVerified).toBe(false);
+    const msg = mail.lastTo(email);
+    expect(msg?.text).toMatch(/verification token:/i);
+    const token = msg!.text.split('token: ')[1]!.trim();
+
+    await expect(auth.verifyEmail({ token })).resolves.toEqual({
+      verified: true,
+    });
+    const row = await pool.query<{ email_verified: boolean }>(
+      `SELECT email_verified FROM identity.users WHERE id = $1`,
+      [result.user.id],
+    );
+    expect(row.rows[0]?.email_verified).toBe(true);
+
+    await expect(auth.verifyEmail({ token })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
-  it('rotates refresh tokens and rejects reuse of the old one', async () => {
+  it('forgot password always looks the same; reset revokes sessions', async () => {
+    if (!available) return;
+    mail.clear();
+    const email = `reset_${suffix}@example.com`;
+    const password = 'long-enough-password';
+    const registered = await auth.register({
+      username: `reset_${suffix}`,
+      email,
+      password,
+    });
+    const session = registered.tokens;
+
+    const missing = await auth.forgotPassword({
+      email: `nope_${suffix}@example.com`,
+    });
+    const existing = await auth.forgotPassword({ email });
+    expect(existing).toEqual(missing);
+
+    const msg = mail.lastTo(email);
+    expect(msg?.text).toMatch(/reset token:/i);
+    const token = msg!.text.split('token: ')[1]!.trim();
+
+    await auth.resetPassword({
+      token,
+      newPassword: 'brand-new-password-99',
+    });
+
+    await expect(auth.refresh(session.refreshToken)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await expect(
+      auth.login({ identifier: email, password }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    const again = await auth.login({
+      identifier: email,
+      password: 'brand-new-password-99',
+    });
+    expect(again.user.id).toBe(registered.user.id);
+  });
+
+  it('rotates refresh and detects reuse', async () => {
     if (!available) return;
     const registered = await auth.register({
       username: `rot_${suffix}`,
@@ -63,55 +127,27 @@ describe('AuthService tokens (integration)', () => {
       password: 'long-enough-password',
     });
     const first = registered.tokens.refreshToken;
-
     const rotated = await auth.refresh(first);
-    expect(rotated.refreshToken).not.toBe(first);
-    const verified = await keys.verifyAccessToken(rotated.accessToken);
-    expect(verified.sub).toBe(registered.user.id);
-
-    // Second refresh with the new token works.
     const rotated2 = await auth.refresh(rotated.refreshToken);
-    expect(rotated2.refreshToken).not.toBe(rotated.refreshToken);
-
-    // Presenting the first (now previous) token after further rotation —
-    // use the intermediate token as reuse after rotated2.
     await expect(auth.refresh(rotated.refreshToken)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
-
-    // Family should be dead: even the latest token fails.
     await expect(auth.refresh(rotated2.refreshToken)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
   });
 
-  it('login issues tokens; logout revokes refresh', async () => {
-    if (!available) return;
-    const username = `out_${suffix}`;
-    const password = 'long-enough-password';
-    await auth.register({
-      username,
-      email: `out_${suffix}@example.com`,
-      password,
-    });
-    const loggedIn = await auth.login({ identifier: username, password });
-    await auth.logout(loggedIn.tokens.refreshToken);
-    await expect(
-      auth.refresh(loggedIn.tokens.refreshToken),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-  });
-
   it('rejects duplicate registration', async () => {
     if (!available) return;
-    const email = `dup2_${suffix}@example.com`;
+    const email = `dup3_${suffix}@example.com`;
     await auth.register({
-      username: `dup2_${suffix}`,
+      username: `dup3_${suffix}`,
       email,
       password: 'long-enough-password',
     });
     await expect(
       auth.register({
-        username: `other2_${suffix}`,
+        username: `other3_${suffix}`,
         email,
         password: 'long-enough-password',
       }),

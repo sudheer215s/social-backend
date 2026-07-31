@@ -201,6 +201,17 @@ export class SessionService {
       [sessionId],
     );
   }
+
+  async revokeAllForUser(userId: string, client?: PoolClient): Promise<void> {
+    const sql = `UPDATE identity.sessions
+       SET revoked_at = now()
+       WHERE user_id = $1 AND revoked_at IS NULL`;
+    if (client) {
+      await client.query(sql, [userId]);
+    } else {
+      await this.pool.query(sql, [userId]);
+    }
+  }
 }
 
 function buffersEqual(a: Buffer, b: Buffer): boolean {

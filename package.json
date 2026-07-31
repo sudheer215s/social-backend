@@ -24,7 +24,8 @@
     "test:integration": "pnpm --filter @social/platform-db test:integration && pnpm --filter @social/identity-service test:integration",
     "docker:build:hello": "docker build -f docker/Dockerfile.hello-service -t social-hello:local .",
     "dev:setup": "bash scripts/dev-setup.sh",
-    "dev:identity": "turbo run dev --filter=@social/identity-service"
+    "dev:identity": "turbo run dev --filter=@social/identity-service",
+    "dev:gateway": "turbo run dev --filter=@social/api-gateway"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

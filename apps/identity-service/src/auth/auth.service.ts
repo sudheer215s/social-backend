@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -7,8 +8,16 @@ import { uuidv7 } from 'uuidv7';
 import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
 import { getDummyPasswordHash, hashPassword, verifyPassword } from './password';
-import type { LoginInput, RegisterInput } from './validation';
+import type {
+  ForgotPasswordInput,
+  LoginInput,
+  RegisterInput,
+  ResetPasswordInput,
+  VerifyEmailInput,
+} from './validation';
 import { SessionService, type TokenPair } from '../tokens/session.service';
+import type { EmailPort } from '../email/email.port';
+import { EmailTokenService } from './email-token.service';
 
 export interface PublicUser {
   id: string;
@@ -26,11 +35,17 @@ export interface AuthResult {
   tokens: TokenPair;
 }
 
+const PUBLIC_FORGOT_BODY = {
+  message: 'If an account exists for that email, a reset link has been sent.',
+} as const;
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly pool: Pool,
     private readonly sessions: SessionService,
+    private readonly emailTokens: EmailTokenService,
+    private readonly email: EmailPort,
   ) {}
 
   async register(input: RegisterInput): Promise<AuthResult> {
@@ -38,7 +53,7 @@ export class AuthService {
     const userId = uuidv7();
 
     try {
-      return await withTransaction(this.pool, async (client) => {
+      const result = await withTransaction(this.pool, async (client) => {
         await client.query(
           `INSERT INTO identity.users (id, username, email, display_name)
            VALUES ($1, $2, $3, $4)`,
@@ -73,13 +88,26 @@ export class AuthService {
         if (!u) {
           throw new Error('user insert vanished');
         }
+        const verifyToken = await this.emailTokens.issue(
+          userId,
+          'verify_email',
+          client,
+        );
         const tokens = await this.sessions.issueSession(
           userId,
           undefined,
           client,
         );
-        return { user: mapUser(u), tokens };
+        return { user: mapUser(u), tokens, verifyToken };
       });
+
+      await this.email.send({
+        to: result.user.email,
+        subject: 'Verify your email',
+        text: `Your verification token: ${result.verifyToken}`,
+      });
+
+      return { user: result.user, tokens: result.tokens };
     } catch (err) {
       if (isUniqueViolation(err)) {
         throw new ConflictException('username or email already registered');
@@ -135,6 +163,87 @@ export class AuthService {
 
   async logout(refreshToken: string): Promise<void> {
     await this.sessions.revokeByRefreshToken(refreshToken);
+  }
+
+  async verifyEmail(input: VerifyEmailInput): Promise<{ verified: true }> {
+    const consumed = await this.emailTokens.consume(
+      input.token,
+      'verify_email',
+    );
+    if (!consumed) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+    await this.pool.query(
+      `UPDATE identity.users
+       SET email_verified = true, updated_at = now()
+       WHERE id = $1`,
+      [consumed.userId],
+    );
+    return { verified: true };
+  }
+
+  /**
+   * Always returns the same body (anti-enumeration). Timing is best-effort;
+   * production rate limits belong at the gateway.
+   */
+  async forgotPassword(
+    input: ForgotPasswordInput,
+  ): Promise<typeof PUBLIC_FORGOT_BODY> {
+    const email = input.email.trim();
+    const found = await this.pool.query<{ id: string; email: string }>(
+      `SELECT id, email::text AS email FROM identity.users
+       WHERE email = $1 AND status = 'active' LIMIT 1`,
+      [email],
+    );
+    const user = found.rows[0];
+    if (user) {
+      const token = await this.emailTokens.issue(user.id, 'reset_password');
+      await this.email.send({
+        to: user.email,
+        subject: 'Reset your password',
+        text: `Your password reset token: ${token}`,
+      });
+    }
+    return PUBLIC_FORGOT_BODY;
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<{ reset: true }> {
+    const consumed = await this.emailTokens.consume(
+      input.token,
+      'reset_password',
+    );
+    if (!consumed) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await hashPassword(input.newPassword);
+    await withTransaction(this.pool, async (client) => {
+      await client.query(
+        `UPDATE identity.credentials
+         SET password_hash = $2,
+             password_updated_at = now(),
+             failed_attempts = 0,
+             locked_until = NULL
+         WHERE user_id = $1`,
+        [consumed.userId, passwordHash],
+      );
+      await this.sessions.revokeAllForUser(consumed.userId, client);
+    });
+
+    const user = await this.pool.query<{ email: string }>(
+      `SELECT email::text AS email FROM identity.users WHERE id = $1`,
+      [consumed.userId],
+    );
+    const to = user.rows[0]?.email;
+    if (to) {
+      await this.email.send({
+        to,
+        subject: 'Your password was changed',
+        text: 'If you did not change your password, contact support immediately.',
+      });
+    }
+
+    return { reset: true };
   }
 }
 

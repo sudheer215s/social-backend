@@ -10,7 +10,9 @@ import { HealthService } from '@social/platform-telemetry';
 import type { Pool } from 'pg';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
+import { EmailTokenService } from './auth/email-token.service';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
+import { ConsoleEmailAdapter } from './email/console-email.adapter';
 import { HealthController } from './health.controller';
 import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
 import { SessionService } from './tokens/session.service';
@@ -40,6 +42,7 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
       provide: JWT_KEYS,
       useFactory: async (): Promise<JwtKeyRing> => createDevKeyRing(),
     },
+    ConsoleEmailAdapter,
     {
       provide: HealthService,
       inject: [PG_POOL],
@@ -55,10 +58,19 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
         new SessionService(pool, keys),
     },
     {
+      provide: EmailTokenService,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new EmailTokenService(pool),
+    },
+    {
       provide: AuthService,
-      inject: [PG_POOL, SessionService],
-      useFactory: (pool: Pool, sessions: SessionService) =>
-        new AuthService(pool, sessions),
+      inject: [PG_POOL, SessionService, EmailTokenService, ConsoleEmailAdapter],
+      useFactory: (
+        pool: Pool,
+        sessions: SessionService,
+        emailTokens: EmailTokenService,
+        email: ConsoleEmailAdapter,
+      ) => new AuthService(pool, sessions, emailTokens, email),
     },
     {
       provide: JwtKeyRing,
@@ -66,7 +78,13 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
       useFactory: (keys: JwtKeyRing) => keys,
     },
   ],
-  exports: [PG_POOL, AuthService, JwtKeyRing, SessionService],
+  exports: [
+    PG_POOL,
+    AuthService,
+    JwtKeyRing,
+    SessionService,
+    ConsoleEmailAdapter,
+  ],
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}

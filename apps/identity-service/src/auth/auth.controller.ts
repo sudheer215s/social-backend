@@ -1,6 +1,13 @@
 import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { loginSchema, refreshSchema, registerSchema } from './validation';
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  refreshSchema,
+  registerSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+} from './validation';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { JwtKeyRing } from '../tokens/jwt-keys';
 
@@ -47,7 +54,33 @@ export class AuthController {
     await this.auth.logout(body.refreshToken);
   }
 
-  /** Public JWKS for access-token verification (gateway / resource servers). */
+  @Post('v1/auth/verify-email')
+  @HttpCode(200)
+  async verifyEmail(
+    @Body(new ZodValidationPipe(verifyEmailSchema))
+    body: ReturnType<typeof verifyEmailSchema.parse>,
+  ) {
+    return this.auth.verifyEmail(body);
+  }
+
+  @Post('v1/auth/password/forgot')
+  @HttpCode(202)
+  async forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordSchema))
+    body: ReturnType<typeof forgotPasswordSchema.parse>,
+  ) {
+    return this.auth.forgotPassword(body);
+  }
+
+  @Post('v1/auth/password/reset')
+  @HttpCode(200)
+  async resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordSchema))
+    body: ReturnType<typeof resetPasswordSchema.parse>,
+  ) {
+    return this.auth.resetPassword(body);
+  }
+
   @Get('.well-known/jwks.json')
   jwks() {
     return this.keys.toJwks();
