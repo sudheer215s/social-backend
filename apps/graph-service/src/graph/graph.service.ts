@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
+import { appendOutbox } from '@social/platform-events';
+
+export const GRAPH_TOPIC = 'social.graph.v1';
 
 @Injectable()
 export class GraphService {
@@ -21,21 +24,45 @@ export class GraphService {
       if ((blocked.rowCount ?? 0) > 0) {
         throw new BadRequestException('Cannot follow due to block');
       }
-      await client.query(
+      const inserted = await client.query(
         `INSERT INTO graph.follows (follower_id, followee_id)
          VALUES ($1, $2)
-         ON CONFLICT DO NOTHING`,
+         ON CONFLICT DO NOTHING
+         RETURNING follower_id`,
         [followerId, followeeId],
       );
+      if ((inserted.rowCount ?? 0) > 0) {
+        await appendOutbox(client, 'graph', {
+          aggregateType: 'follow',
+          aggregateId: `${followerId}:${followeeId}`,
+          eventType: 'user.followed',
+          partitionKey: followeeId,
+          topic: GRAPH_TOPIC,
+          payload: { followerId, followeeId },
+        });
+      }
     });
   }
 
   async unfollow(followerId: string, followeeId: string): Promise<void> {
-    await this.pool.query(
-      `DELETE FROM graph.follows
-       WHERE follower_id = $1 AND followee_id = $2`,
-      [followerId, followeeId],
-    );
+    await withTransaction(this.pool, async (client) => {
+      const deleted = await client.query(
+        `DELETE FROM graph.follows
+         WHERE follower_id = $1 AND followee_id = $2
+         RETURNING follower_id`,
+        [followerId, followeeId],
+      );
+      if ((deleted.rowCount ?? 0) > 0) {
+        await appendOutbox(client, 'graph', {
+          aggregateType: 'follow',
+          aggregateId: `${followerId}:${followeeId}`,
+          eventType: 'user.unfollowed',
+          partitionKey: followeeId,
+          topic: GRAPH_TOPIC,
+          payload: { followerId, followeeId },
+        });
+      }
+    });
   }
 
   async listFollowing(
@@ -78,6 +105,18 @@ export class GraphService {
     }));
   }
 
+  /** For fan-out: page follower IDs. */
+  async listFollowerIds(followeeId: string, limit = 1000): Promise<string[]> {
+    const rows = await this.pool.query<{ follower_id: string }>(
+      `SELECT follower_id FROM graph.follows
+       WHERE followee_id = $1
+       ORDER BY follower_id
+       LIMIT $2`,
+      [followeeId, Math.min(Math.max(limit, 1), 5000)],
+    );
+    return rows.rows.map((r) => r.follower_id);
+  }
+
   async block(blockerId: string, blockedId: string): Promise<void> {
     if (blockerId === blockedId) {
       throw new BadRequestException('Cannot block yourself');
@@ -89,7 +128,6 @@ export class GraphService {
          ON CONFLICT DO NOTHING`,
         [blockerId, blockedId],
       );
-      // Sever follows both ways
       await client.query(
         `DELETE FROM graph.follows
          WHERE (follower_id = $1 AND followee_id = $2)

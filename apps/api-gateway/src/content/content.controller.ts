@@ -220,4 +220,25 @@ export class ContentController {
       authorization ? { authorization } : {},
     );
   }
+
+  @Get('v1/timelines/home')
+  @UseGuards(AuthGuard)
+  home(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+    @Query('before') before?: string,
+  ) {
+    const authorization = this.bearer(req);
+    const q = new URLSearchParams();
+    if (limit) q.set('limit', limit);
+    if (before) q.set('before', before);
+    const qs = q.toString() ? `?${q}` : '';
+    return this.forward(
+      'TIMELINE_BASE_URL',
+      'http://127.0.0.1:3004',
+      'GET',
+      `/v1/timelines/home${qs}`,
+      authorization ? { authorization } : {},
+    );
+  }
 }

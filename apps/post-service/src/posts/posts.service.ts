@@ -5,8 +5,11 @@ import {
 } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
+import { appendOutbox } from '@social/platform-events';
 import { uuidv7 } from 'uuidv7';
 import type { CreatePostInput } from './posts.validation';
+
+export const POST_TOPIC = 'social.post.v1';
 
 export interface PostDto {
   id: string;
@@ -30,41 +33,62 @@ export class PostsService {
     let threadRootId: string | null = null;
     const replyToId: string | null = input.replyToId ?? null;
 
-    if (replyToId) {
-      const parent = await this.pool.query<{
-        id: string;
-        thread_root_id: string | null;
-        deleted_at: Date | null;
-      }>(
-        `SELECT id, thread_root_id, deleted_at FROM post.posts WHERE id = $1`,
-        [replyToId],
-      );
-      const p = parent.rows[0];
-      if (!p || p.deleted_at) {
-        throw new NotFoundException('Parent post not found');
+    return withTransaction(this.pool, async (client) => {
+      if (replyToId) {
+        const parent = await client.query<{
+          id: string;
+          thread_root_id: string | null;
+          deleted_at: Date | null;
+        }>(
+          `SELECT id, thread_root_id, deleted_at FROM post.posts WHERE id = $1`,
+          [replyToId],
+        );
+        const p = parent.rows[0];
+        if (!p || p.deleted_at) {
+          throw new NotFoundException('Parent post not found');
+        }
+        threadRootId = p.thread_root_id ?? p.id;
       }
-      threadRootId = p.thread_root_id ?? p.id;
-    }
 
-    const mediaRefs = input.mediaRefs ?? [];
-    const row = await this.pool.query(
-      `INSERT INTO post.posts
-         (id, author_id, content, media_refs, reply_to_id, thread_root_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, author_id, content, media_refs, reply_to_id, thread_root_id,
-                 like_count, reply_count, repost_count, created_at`,
-      [id, authorId, input.content, mediaRefs, replyToId, threadRootId],
-    );
-
-    if (replyToId) {
-      await this.pool.query(
-        `UPDATE post.posts SET reply_count = reply_count + 1
-         WHERE id = $1 AND deleted_at IS NULL`,
-        [replyToId],
+      const mediaRefs = input.mediaRefs ?? [];
+      const row = await client.query(
+        `INSERT INTO post.posts
+           (id, author_id, content, media_refs, reply_to_id, thread_root_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, author_id, content, media_refs, reply_to_id, thread_root_id,
+                   like_count, reply_count, repost_count, created_at`,
+        [id, authorId, input.content, mediaRefs, replyToId, threadRootId],
       );
-    }
 
-    return mapPost(row.rows[0] as PostRow);
+      if (replyToId) {
+        await client.query(
+          `UPDATE post.posts SET reply_count = reply_count + 1
+           WHERE id = $1 AND deleted_at IS NULL`,
+          [replyToId],
+        );
+      }
+
+      const post = mapPost(row.rows[0] as PostRow);
+
+      // Top-level posts only fan out to home timelines
+      if (!replyToId) {
+        await appendOutbox(client, 'post', {
+          aggregateType: 'post',
+          aggregateId: post.id,
+          eventType: 'post.created',
+          partitionKey: post.authorId,
+          topic: POST_TOPIC,
+          payload: {
+            postId: post.id,
+            authorId: post.authorId,
+            content: post.content,
+            createdAt: post.createdAt.toISOString(),
+          },
+        });
+      }
+
+      return post;
+    });
   }
 
   async getById(postId: string): Promise<PostDto> {
@@ -78,6 +102,21 @@ export class PostsService {
     const p = row.rows[0] as PostRow | undefined;
     if (!p) throw new NotFoundException('Post not found');
     return mapPost(p);
+  }
+
+  async getByIds(ids: string[]): Promise<PostDto[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.pool.query(
+      `SELECT id, author_id, content, media_refs, reply_to_id, thread_root_id,
+              like_count, reply_count, repost_count, created_at
+       FROM post.posts
+       WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL`,
+      [ids],
+    );
+    const byId = new Map(
+      (rows.rows as PostRow[]).map((r) => [r.id, mapPost(r)]),
+    );
+    return ids.map((id) => byId.get(id)).filter((p): p is PostDto => !!p);
   }
 
   async listByAuthor(authorId: string, limit = 20): Promise<PostDto[]> {

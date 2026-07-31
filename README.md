@@ -131,6 +131,7 @@ pnpm dev:identity           # identity-service on :3001
 pnpm dev:gateway            # api-gateway on :3000
 pnpm dev:post               # post-service on :3002
 pnpm dev:graph              # graph-service on :3003
+pnpm dev:timeline           # timeline-service on :3004
 ```
 
 **Manual:**
@@ -169,7 +170,8 @@ social-backend/
 │   ├── identity-service/          # Phase 1 auth (register/login/tokens/email)
 │   ├── api-gateway/               # Public edge: JWT verify + auth proxy
 │   ├── post-service/              # Phase 2 posts + likes
-│   └── graph-service/             # Phase 2 follows + blocks
+│   ├── graph-service/             # Phase 2 follows + blocks
+│   └── timeline-service/          # Phase 3/4 home timeline + fan-out
 ├── libs/
 │   ├── platform-config/           # fail-fast Zod config
 │   ├── platform-telemetry/        # Pino logger, redaction, health probes

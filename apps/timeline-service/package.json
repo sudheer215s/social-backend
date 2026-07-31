@@ -1,8 +1,8 @@
 {
-  "name": "@social/post-service",
+  "name": "@social/timeline-service",
   "version": "0.0.1",
   "private": true,
-  "description": "Posts and likes (Phase 2)",
+  "description": "Home timeline fan-out + read path (Phase 4)",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
@@ -10,22 +10,21 @@
     "dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "test:integration": "jest --config ./test/jest.integration.config.js --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
-    "@social/platform-db": "workspace:*",
     "@social/platform-events": "workspace:*",
+    "@social/platform-redis": "workspace:*",
     "@social/platform-telemetry": "workspace:*",
+    "ioredis": "^5.4.2",
     "jose": "5",
     "kafkajs": "^2.2.4",
-    "pg": "^8.13.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "uuidv7": "^1.0.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -35,25 +34,16 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
-    "@types/pg": "^8.11.11",
     "jest": "^30.0.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.7.3"
   },
   "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
+    "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "testPathIgnorePatterns": [
-      ".*\\.integration\\.spec\\.ts$"
-    ],
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
+    "testPathIgnorePatterns": [".*\\.integration\\.spec\\.ts$"],
+    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
     "testEnvironment": "node"
   }
 }

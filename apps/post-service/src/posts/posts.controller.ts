@@ -29,6 +29,17 @@ export class PostsController {
     return { post };
   }
 
+  @Get('batch')
+  async batch(@Query('ids') ids?: string) {
+    const list = (ids ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 100);
+    const posts = await this.posts.getByIds(list);
+    return { posts };
+  }
+
   @Get(':id')
   async get(@Param('id') id: string) {
     const post = await this.posts.getById(id);

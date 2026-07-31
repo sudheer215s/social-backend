@@ -54,6 +54,19 @@ export class GraphController {
     return { items };
   }
 
+  /** Internal fan-out helper (ids only). */
+  @Get('followers/:userId/ids')
+  async followerIds(
+    @Param('userId') userId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const ids = await this.graph.listFollowerIds(
+      userId,
+      limit ? Number(limit) : 1000,
+    );
+    return { ids };
+  }
+
   @Post('blocks/:userId')
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)

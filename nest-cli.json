@@ -53,6 +53,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/graph-service/tsconfig.build.json"
       }
+    },
+    "timeline-service": {
+      "type": "application",
+      "root": "apps/timeline-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/timeline-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/timeline-service/tsconfig.build.json"
+      }
     }
   }
 }

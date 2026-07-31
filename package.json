@@ -27,7 +27,8 @@
     "dev:identity": "turbo run dev --filter=@social/identity-service",
     "dev:gateway": "turbo run dev --filter=@social/api-gateway",
     "dev:post": "turbo run dev --filter=@social/post-service",
-    "dev:graph": "turbo run dev --filter=@social/graph-service"
+    "dev:graph": "turbo run dev --filter=@social/graph-service",
+    "dev:timeline": "turbo run dev --filter=@social/timeline-service"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
