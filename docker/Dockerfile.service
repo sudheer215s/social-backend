@@ -1,0 +1,65 @@
+# Generic multi-stage image for any @social/* Nest app in this monorepo.
+#
+# Build from repo root:
+#   docker build -f docker/Dockerfile.service \
+#     --build-arg APP=identity-service \
+#     --build-arg PKG=@social/identity-service \
+#     --build-arg PORT=3001 \
+#     -t social-identity:local .
+#
+# Distroless runtime, non-root. Proto files copied for identity gRPC.
+
+ARG APP=identity-service
+ARG PKG=@social/identity-service
+ARG PORT=3001
+
+FROM node:22-bookworm-slim AS base
+WORKDIR /app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json nest-cli.json ./
+# Workspace package manifests only (layer cache)
+COPY apps/api-gateway/package.json apps/api-gateway/
+COPY apps/graph-service/package.json apps/graph-service/
+COPY apps/hello-service/package.json apps/hello-service/
+COPY apps/identity-service/package.json apps/identity-service/
+COPY apps/notification-service/package.json apps/notification-service/
+COPY apps/post-service/package.json apps/post-service/
+COPY apps/realtime-gateway/package.json apps/realtime-gateway/
+COPY apps/search-service/package.json apps/search-service/
+COPY apps/timeline-service/package.json apps/timeline-service/
+COPY libs/platform-config/package.json libs/platform-config/
+COPY libs/platform-db/package.json libs/platform-db/
+COPY libs/platform-events/package.json libs/platform-events/
+COPY libs/platform-grpc/package.json libs/platform-grpc/
+COPY libs/platform-redis/package.json libs/platform-redis/
+COPY libs/platform-telemetry/package.json libs/platform-telemetry/
+COPY libs/platform-testing/package.json libs/platform-testing/
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
+ARG APP
+ARG PKG
+COPY apps ./apps
+COPY libs ./libs
+COPY proto ./proto
+COPY eslint.config.mjs .prettierrc ./
+# Build target app and all workspace dependencies
+RUN pnpm turbo build --filter=${PKG}...
+# Portable prod tree: app dist + workspace packages + production node_modules
+RUN pnpm --filter ${PKG} deploy --prod /out \
+  && mkdir -p /out/proto \
+  && cp -R proto/. /out/proto/ 2>/dev/null || true
+
+FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
+ARG PORT
+WORKDIR /app
+COPY --from=build /out/ ./
+ENV NODE_ENV=production
+ENV PORT=${PORT}
+EXPOSE ${PORT}
+# deploy layout: package root with dist/main.js
+CMD ["dist/main.js"]

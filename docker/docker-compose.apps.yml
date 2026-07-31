@@ -1,0 +1,264 @@
+# Application services — join the infra network from docker-compose.yml.
+#
+# Usage (infra must already be up):
+#   pnpm compose:up
+#   pnpm compose:apps:up
+#   pnpm compose:apps:ps
+#   pnpm smoke:e2e
+#
+# Or full stack:
+#   pnpm compose:stack
+#
+# Build a single image:
+#   docker build -f docker/Dockerfile.service \
+#     --build-arg APP=identity-service --build-arg PKG=@social/identity-service \
+#     --build-arg PORT=3001 -t social-identity:local .
+
+name: social-backend
+
+x-app-build: &app-build
+  context: ..
+  dockerfile: docker/Dockerfile.service
+
+x-common-env: &common-env
+  NODE_ENV: production
+  LOG_LEVEL: info
+  DATABASE_URL: postgres://social:social@pgbouncer:6432/social
+  DATABASE_POOL_MAX: '5'
+  REDIS_URL: redis://redis:6379
+  KAFKA_BROKERS: redpanda:9092
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  JWT_ISSUER: http://identity-service:3001
+  JWT_AUDIENCE: api
+  IDENTITY_JWKS_URL: http://identity-service:3001/.well-known/jwks.json
+  IDENTITY_BASE_URL: http://identity-service:3001
+  IDENTITY_GRPC_URL: identity-service:50051
+  POST_BASE_URL: http://post-service:3002
+  GRAPH_BASE_URL: http://graph-service:3003
+  TIMELINE_BASE_URL: http://timeline-service:3004
+  NOTIFICATION_BASE_URL: http://notification-service:3005
+  SEARCH_BASE_URL: http://search-service:3006
+  REALTIME_BASE_URL: http://realtime-gateway:3007
+  ELASTICSEARCH_URL: http://elasticsearch:9200
+  REALTIME_SERVICE_TOKEN: local-dev-realtime-token
+
+services:
+  identity-service:
+    build:
+      <<: *app-build
+      args:
+        APP: identity-service
+        PKG: '@social/identity-service'
+        PORT: '3001'
+    image: social-identity:local
+    container_name: social-identity
+    environment:
+      <<: *common-env
+      SERVICE_NAME: identity-service
+      PORT: '3001'
+      IDENTITY_GRPC_URL: 0.0.0.0:50051
+    ports:
+      - '3001:3001'
+      - '50051:50051'
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  post-service:
+    build:
+      <<: *app-build
+      args:
+        APP: post-service
+        PKG: '@social/post-service'
+        PORT: '3002'
+    image: social-post:local
+    container_name: social-post
+    environment:
+      <<: *common-env
+      SERVICE_NAME: post-service
+      PORT: '3002'
+    ports:
+      - '3002:3002'
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  graph-service:
+    build:
+      <<: *app-build
+      args:
+        APP: graph-service
+        PKG: '@social/graph-service'
+        PORT: '3003'
+    image: social-graph:local
+    container_name: social-graph
+    environment:
+      <<: *common-env
+      SERVICE_NAME: graph-service
+      PORT: '3003'
+    ports:
+      - '3003:3003'
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  timeline-service:
+    build:
+      <<: *app-build
+      args:
+        APP: timeline-service
+        PKG: '@social/timeline-service'
+        PORT: '3004'
+    image: social-timeline:local
+    container_name: social-timeline
+    environment:
+      <<: *common-env
+      SERVICE_NAME: timeline-service
+      PORT: '3004'
+    ports:
+      - '3004:3004'
+    depends_on:
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      graph-service:
+        condition: service_started
+      post-service:
+        condition: service_started
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      <<: *app-build
+      args:
+        APP: notification-service
+        PKG: '@social/notification-service'
+        PORT: '3005'
+    image: social-notification:local
+    container_name: social-notification
+    environment:
+      <<: *common-env
+      SERVICE_NAME: notification-service
+      PORT: '3005'
+    ports:
+      - '3005:3005'
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      graph-service:
+        condition: service_started
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  search-service:
+    build:
+      <<: *app-build
+      args:
+        APP: search-service
+        PKG: '@social/search-service'
+        PORT: '3006'
+    image: social-search:local
+    container_name: social-search
+    environment:
+      <<: *common-env
+      SERVICE_NAME: search-service
+      PORT: '3006'
+    ports:
+      - '3006:3006'
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  realtime-gateway:
+    build:
+      <<: *app-build
+      args:
+        APP: realtime-gateway
+        PKG: '@social/realtime-gateway'
+        PORT: '3007'
+    image: social-realtime:local
+    container_name: social-realtime
+    environment:
+      <<: *common-env
+      SERVICE_NAME: realtime-gateway
+      PORT: '3007'
+    ports:
+      - '3007:3007'
+    depends_on:
+      redis:
+        condition: service_healthy
+      notification-service:
+        condition: service_started
+      identity-service:
+        condition: service_started
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      <<: *app-build
+      args:
+        APP: api-gateway
+        PKG: '@social/api-gateway'
+        PORT: '3000'
+    image: social-gateway:local
+    container_name: social-gateway
+    environment:
+      <<: *common-env
+      SERVICE_NAME: api-gateway
+      PORT: '3000'
+    ports:
+      - '3000:3000'
+    depends_on:
+      identity-service:
+        condition: service_started
+      post-service:
+        condition: service_started
+      graph-service:
+        condition: service_started
+      timeline-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      search-service:
+        condition: service_started
+      realtime-gateway:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - social-net
+    restart: unless-stopped
