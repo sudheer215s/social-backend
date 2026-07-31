@@ -1,10 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: social
+# secrets.yaml is local/dev only — see overlays/dev and external-secrets/ for prod.
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secrets.yaml
   - apps.yaml
   - hpa.yaml
   - pdb.yaml

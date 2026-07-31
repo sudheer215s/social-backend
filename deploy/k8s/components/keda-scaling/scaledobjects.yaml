@@ -1,0 +1,62 @@
+# Example custom scaling signals (design: Kafka lag, connection pressure).
+# Edit bootstrap servers / topics to match your environment.
+# When enabled, consider lowering or removing CPU HPA on the same Deployments
+# to avoid dueling autoscalers.
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: notification-processor-lag
+  namespace: social
+spec:
+  scaleTargetRef:
+    name: notification-service
+  minReplicaCount: 2
+  maxReplicaCount: 12
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: redpanda.social.svc.cluster.local:9092
+        consumerGroup: notification-processor
+        topic: social.post.v1
+        lagThreshold: '500'
+        offsetResetPolicy: latest
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: timeline-fanout-lag
+  namespace: social
+spec:
+  scaleTargetRef:
+    name: timeline-service
+  minReplicaCount: 2
+  maxReplicaCount: 12
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: redpanda.social.svc.cluster.local:9092
+        consumerGroup: timeline-fanout
+        topic: social.post.v1
+        lagThreshold: '1000'
+        offsetResetPolicy: latest
+---
+# Realtime: scale on Prometheus metric if you export websocket_active_connections.
+# Requires prometheus-adapter or KEDA prometheus trigger.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: realtime-connections
+  namespace: social
+spec:
+  scaleTargetRef:
+    name: realtime-gateway
+  minReplicaCount: 2
+  maxReplicaCount: 15
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus.monitoring.svc.cluster.local:9090
+        metricName: websocket_active_connections
+        query: sum(websocket_active_connections{namespace="social"})
+        threshold: '8000'

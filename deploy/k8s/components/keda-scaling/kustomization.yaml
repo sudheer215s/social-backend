@@ -1,0 +1,12 @@
+# Optional — requires KEDA installed in the cluster.
+#   kubectl apply -k deploy/k8s/components/keda-scaling
+#
+# Or pull into an overlay:
+#   resources:
+#     - ../../
+#     - ../../components/keda-scaling
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: social
+resources:
+  - scaledobjects.yaml

@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: social
 resources:
   - ../../
+  - ../../secrets.yaml
 labels:
   - pairs:
       environment: dev

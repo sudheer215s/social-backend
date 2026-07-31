@@ -3,15 +3,18 @@ kind: Kustomization
 namespace: social
 resources:
   - ../../
+  - ../../external-secrets
 labels:
   - pairs:
       environment: prod
     includeSelectors: false
-# Point these at your registry + immutable tags/digests before apply.
+# Pin to registry + tag; prefer `digest:` once CI publishes immutable digests
+# (see images-digests.example.yaml).
 images:
   - name: social-identity
     newName: ghcr.io/example/social-identity
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-post
     newName: ghcr.io/example/social-post
     newTag: '1.0.0'

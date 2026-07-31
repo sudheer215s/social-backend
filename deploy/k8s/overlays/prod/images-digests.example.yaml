@@ -1,0 +1,16 @@
+# Copy into kustomization.yaml under `images:` (or merge) after CI publishes digests.
+# Prefer digests over floating tags for prod:
+#
+#   crane digest ghcr.io/example/social-gateway:1.0.0
+#
+# Example entry (replace sha256 values):
+# images:
+#   - name: social-gateway
+#     newName: ghcr.io/example/social-gateway
+#     digest: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+apiVersion: builtin
+kind: ObjectMeta
+metadata:
+  name: images-digests-example
+  annotations:
+    description: documentation-only; not applied
