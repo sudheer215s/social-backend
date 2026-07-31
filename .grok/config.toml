@@ -11,3 +11,8 @@ deny = [
   "Bash(rm -rf /)",
   "Bash(rm -rf /*)",
 ]
+
+# Agent workflow is defined in-repo (always load on session):
+#   AGENTS.md
+#   docs/05-roadmap/WORKFLOW.md
+#   docs/05-roadmap/PROGRESS.md

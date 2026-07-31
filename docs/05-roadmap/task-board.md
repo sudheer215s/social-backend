@@ -1,6 +1,6 @@
 # Implementation Task Board
 
-**Process (every task):** write tests → implement → review → fix → commit
+**Process (every task):** `task → test → code & build → test → review → commit → update PROGRESS.md` (see WORKFLOW.md / PROGRESS.md)
 **Dates:** real commit timestamps only (no backdating).
 **Source of truth:** [`implementation-roadmap.md`](./implementation-roadmap.md) + `docs/01–03`.
 
