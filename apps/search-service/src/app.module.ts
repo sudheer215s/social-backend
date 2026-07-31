@@ -60,10 +60,9 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
     try {
       const kafka = createKafka('search-service');
       this.consumer = await createConsumer(kafka, 'search-indexer');
-      await this.consumer.subscribe({
-        topic: 'social.post.v1',
-        fromBeginning: false,
-      });
+      for (const topic of ['social.post.v1', 'social.user.v1']) {
+        await this.consumer.subscribe({ topic, fromBeginning: false });
+      }
       await this.consumer.run({
         eachMessage: async ({ message }) => {
           if (!message.value) return;

@@ -162,6 +162,16 @@ export class SearchService {
     await this.es.deleteDoc(POSTS_INDEX, postId);
   }
 
+  async deleteUser(userId: string): Promise<void> {
+    await this.es.deleteDoc(USERS_INDEX, userId);
+  }
+
+  async deletePostsByAuthor(authorId: string): Promise<void> {
+    await this.es.deleteByQuery(POSTS_INDEX, {
+      term: { author_id: authorId },
+    });
+  }
+
   async indexUser(input: {
     userId: string;
     username: string;
@@ -210,6 +220,50 @@ export class SearchService {
       const postId = asString(input.payload.postId);
       if (!postId) return 'skipped';
       await this.deletePost(postId);
+      return 'handled';
+    }
+    if (
+      input.eventType === 'user.created' ||
+      input.eventType === 'user.updated'
+    ) {
+      const userId = asString(input.payload.userId);
+      const username = asString(input.payload.username);
+      if (!userId || !username) return 'skipped';
+      const displayName = asString(input.payload.displayName);
+      const bio = asString(input.payload.bio);
+      const visibility = asString(input.payload.visibility);
+      const status = asString(input.payload.status);
+      const createdAt = asString(input.payload.createdAt);
+      const followerCount = asNumber(input.payload.followerCount);
+      const isVerified = input.payload.isVerified === true;
+      // Private accounts remain in the users index for username discovery,
+      // but their posts are not independently searchable as public.
+      await this.indexUser({
+        userId,
+        username,
+        ...(displayName ? { displayName } : {}),
+        ...(bio ? { bio } : {}),
+        ...(visibility ? { visibility } : {}),
+        ...(status ? { status } : {}),
+        ...(createdAt ? { createdAt } : {}),
+        ...(followerCount !== undefined ? { followerCount } : {}),
+        isVerified,
+        discoverable: status !== 'deactivated' && status !== 'erased',
+      });
+      // Visibility flip to private: drop public post docs for this author
+      if (visibility === 'private' || visibility === 'followers') {
+        await this.deletePostsByAuthor(userId);
+      }
+      return 'handled';
+    }
+    if (
+      input.eventType === 'user.deactivated' ||
+      input.eventType === 'user.erased'
+    ) {
+      const userId = asString(input.payload.userId);
+      if (!userId) return 'skipped';
+      await this.deleteUser(userId);
+      await this.deletePostsByAuthor(userId);
       return 'handled';
     }
     // likes ignored — design: like_count refreshed on reconcile only
@@ -324,4 +378,12 @@ function extractHashtags(content: string): string[] {
 
 function asString(v: unknown): string {
   return typeof v === 'string' ? v : '';
+}
+
+function asNumber(v: unknown): number | undefined {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) {
+    return Number(v);
+  }
+  return undefined;
 }

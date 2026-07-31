@@ -7,6 +7,7 @@ import {
 import { uuidv7 } from 'uuidv7';
 import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
+import { appendOutbox } from '@social/platform-events';
 import { getDummyPasswordHash, hashPassword, verifyPassword } from './password';
 import type {
   ForgotPasswordInput,
@@ -18,6 +19,7 @@ import type {
 import { SessionService, type TokenPair } from '../tokens/session.service';
 import type { EmailPort } from '../email/email.port';
 import { EmailTokenService } from './email-token.service';
+import { USER_TOPIC } from '../users/user-events';
 
 export interface PublicUser {
   id: string;
@@ -98,6 +100,25 @@ export class AuthService {
           undefined,
           client,
         );
+        // No email/PII in the public search index payload
+        await appendOutbox(client, 'identity', {
+          aggregateType: 'user',
+          aggregateId: userId,
+          eventType: 'user.created',
+          partitionKey: userId,
+          topic: USER_TOPIC,
+          payload: {
+            userId: u.id,
+            username: u.username,
+            displayName: u.display_name,
+            bio: null,
+            visibility: u.visibility,
+            status: u.status,
+            isVerified: false,
+            followerCount: 0,
+            createdAt: u.created_at.toISOString(),
+          },
+        });
         return { user: mapUser(u), tokens, verifyToken };
       });
 

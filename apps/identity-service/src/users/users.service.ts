@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
+import { appendOutbox } from '@social/platform-events';
 import type { SessionService } from '../tokens/session.service';
 import type { UpdateProfileInput } from './profile.validation';
+import { USER_TOPIC } from './user-events';
 
 export interface PublicProfile {
   id: string;
@@ -68,7 +70,18 @@ export class UsersService {
          RETURNING id`,
         [userId],
       );
-      return (updated.rowCount ?? 0) > 0;
+      if ((updated.rowCount ?? 0) === 0) {
+        return false;
+      }
+      await appendOutbox(client, 'identity', {
+        aggregateType: 'user',
+        aggregateId: userId,
+        eventType: 'user.deactivated',
+        partitionKey: userId,
+        topic: USER_TOPIC,
+        payload: { userId, status: 'deactivated' },
+      });
+      return true;
     });
     if (!result) {
       throw new NotFoundException('User not found or already deactivated');
@@ -112,22 +125,43 @@ export class UsersService {
     params.push(userId);
 
     try {
-      const result = await this.pool.query(
-        `UPDATE identity.users
-         SET ${sets.join(', ')}
-         WHERE id = $${i} AND status <> 'erased'
-         RETURNING id, username::text AS username, email::text AS email,
-                   email_verified, display_name, bio, avatar_media_id,
-                   visibility, status, is_verified,
-                   follower_count, following_count, post_count, created_at`,
-        params,
-      );
-      const row = result.rows[0] as UserRow | undefined;
-      if (!row) {
-        throw new NotFoundException('User not found');
-      }
-      return mapPrivate(row);
+      return await withTransaction(this.pool, async (client) => {
+        const result = await client.query(
+          `UPDATE identity.users
+           SET ${sets.join(', ')}
+           WHERE id = $${i} AND status <> 'erased'
+           RETURNING id, username::text AS username, email::text AS email,
+                     email_verified, display_name, bio, avatar_media_id,
+                     visibility, status, is_verified,
+                     follower_count, following_count, post_count, created_at`,
+          params,
+        );
+        const row = result.rows[0] as UserRow | undefined;
+        if (!row) {
+          throw new NotFoundException('User not found');
+        }
+        await appendOutbox(client, 'identity', {
+          aggregateType: 'user',
+          aggregateId: userId,
+          eventType: 'user.updated',
+          partitionKey: userId,
+          topic: USER_TOPIC,
+          payload: {
+            userId: row.id,
+            username: row.username,
+            displayName: row.display_name,
+            bio: row.bio,
+            visibility: row.visibility,
+            status: row.status,
+            isVerified: row.is_verified,
+            followerCount: Number(row.follower_count),
+            createdAt: row.created_at.toISOString(),
+          },
+        });
+        return mapPrivate(row);
+      });
     } catch (err) {
+      if (err instanceof NotFoundException) throw err;
       if (isUniqueViolation(err)) {
         throw new ConflictException('username already taken');
       }

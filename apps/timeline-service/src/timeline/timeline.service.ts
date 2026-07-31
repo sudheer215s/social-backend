@@ -24,6 +24,29 @@ export class TimelineService {
     return written;
   }
 
+  /**
+   * On user.followed: if the follower already has a home timeline key,
+   * inject the followee's recent posts so the feed feels immediate.
+   * No-op when the key is cold (rebuild-on-read will pick them up later).
+   */
+  async backfillOnFollow(
+    followerId: string,
+    followeeId: string,
+    limit = 50,
+  ): Promise<number> {
+    if (!(await this.store.exists(followerId))) {
+      return 0;
+    }
+    const postIds = await this.fetchRecentPostIds(followeeId, limit);
+    let written = 0;
+    for (const postId of postIds) {
+      if (await this.store.fanoutIfExists(followerId, postId)) {
+        written += 1;
+      }
+    }
+    return written;
+  }
+
   async getHomeTimeline(
     userId: string,
     limit = 20,
@@ -98,6 +121,22 @@ export class TimelineService {
         items?: { userId: string }[];
       };
       return (json.items ?? []).map((i) => i.userId);
+    } catch {
+      return [];
+    }
+  }
+
+  private async fetchRecentPostIds(
+    authorId: string,
+    limit: number,
+  ): Promise<string[]> {
+    try {
+      const res = await fetch(
+        `${this.postBaseUrl}/v1/posts?authorId=${encodeURIComponent(authorId)}&limit=${limit}`,
+      );
+      if (!res.ok) return [];
+      const json = (await res.json()) as { posts?: { id: string }[] };
+      return (json.posts ?? []).map((p) => p.id);
     } catch {
       return [];
     }

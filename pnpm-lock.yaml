@@ -281,6 +281,9 @@ importers:
       '@social/platform-db':
         specifier: workspace:*
         version: link:../../libs/platform-db
+      '@social/platform-events':
+        specifier: workspace:*
+        version: link:../../libs/platform-events
       '@social/platform-redis':
         specifier: workspace:^
         version: link:../../libs/platform-redis
@@ -296,6 +299,9 @@ importers:
       jose:
         specifier: '5'
         version: 5.10.0
+      kafkajs:
+        specifier: ^2.2.4
+        version: 2.2.4
       pg:
         specifier: ^8.13.3
         version: 8.22.0

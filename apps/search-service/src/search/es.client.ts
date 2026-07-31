@@ -67,6 +67,24 @@ export class EsClient {
     }
   }
 
+  async deleteByQuery(
+    index: string,
+    query: Record<string, unknown>,
+  ): Promise<void> {
+    const res = await fetch(
+      `${this.baseUrl}/${encodeURIComponent(index)}/_delete_by_query?conflicts=proceed`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query }),
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`deleteByQuery ${index}: ${res.status} ${text}`);
+    }
+  }
+
   async search(
     index: string,
     body: Record<string, unknown>,

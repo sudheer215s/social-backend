@@ -5,11 +5,13 @@ import type { TimelineService } from '../timeline/timeline.service';
 export async function startFanoutConsumer(options: {
   consumer: Consumer;
   timelines: TimelineService;
-  topic?: string;
+  topics?: string[];
   onError?: (err: unknown) => void;
 }): Promise<() => Promise<void>> {
-  const topic = options.topic ?? 'social.post.v1';
-  await options.consumer.subscribe({ topic, fromBeginning: false });
+  const topics = options.topics ?? ['social.post.v1', 'social.graph.v1'];
+  for (const topic of topics) {
+    await options.consumer.subscribe({ topic, fromBeginning: false });
+  }
   await options.consumer.run({
     eachMessage: async ({ message }) => {
       try {
@@ -17,13 +19,19 @@ export async function startFanoutConsumer(options: {
         const envelope = JSON.parse(
           message.value.toString('utf8'),
         ) as DomainEventEnvelope;
-        if (envelope.eventType !== 'post.created') return;
-        const authorRaw = envelope.payload.authorId;
-        const postRaw = envelope.payload.postId;
-        const authorId = typeof authorRaw === 'string' ? authorRaw : '';
-        const postId = typeof postRaw === 'string' ? postRaw : '';
-        if (!authorId || !postId) return;
-        await options.timelines.fanoutPost(authorId, postId);
+        if (envelope.eventType === 'post.created') {
+          const authorId = asString(envelope.payload.authorId);
+          const postId = asString(envelope.payload.postId);
+          if (!authorId || !postId) return;
+          await options.timelines.fanoutPost(authorId, postId);
+          return;
+        }
+        if (envelope.eventType === 'user.followed') {
+          const followerId = asString(envelope.payload.followerId);
+          const followeeId = asString(envelope.payload.followeeId);
+          if (!followerId || !followeeId) return;
+          await options.timelines.backfillOnFollow(followerId, followeeId);
+        }
       } catch (err) {
         options.onError?.(err);
       }
@@ -32,4 +40,8 @@ export async function startFanoutConsumer(options: {
   return async () => {
     await options.consumer.disconnect();
   };
+}
+
+function asString(v: unknown): string {
+  return typeof v === 'string' ? v : '';
 }

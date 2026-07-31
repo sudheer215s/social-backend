@@ -68,6 +68,26 @@ describe('UsersService (integration)', () => {
     expect(pub.id).toBe(registered.user.id);
     expect(pub.displayName).toBe('After Name');
     expect((pub as { email?: string }).email).toBeUndefined();
+
+    const outbox = await pool.query<{ event_type: string }>(
+      `SELECT event_type FROM identity.outbox
+       WHERE aggregate_id = $1
+       ORDER BY created_at`,
+      [registered.user.id],
+    );
+    const types = outbox.rows.map((r) => r.event_type);
+    expect(types).toContain('user.created');
+    expect(types).toContain('user.updated');
+    // Public events must not carry email/PII
+    const createdPayload = await pool.query<{
+      payload: Record<string, unknown>;
+    }>(
+      `SELECT payload FROM identity.outbox
+       WHERE aggregate_id = $1 AND event_type = 'user.created'
+       LIMIT 1`,
+      [registered.user.id],
+    );
+    expect(createdPayload.rows[0]?.payload).not.toHaveProperty('email');
   });
 
   it('rejects username conflicts and missing users', async () => {

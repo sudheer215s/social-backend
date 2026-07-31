@@ -25,9 +25,8 @@ const indexPostSchema = z.object({
 });
 
 /**
- * Query + internal index bootstrap endpoints.
- * Identity does not yet emit user.* outbox events; POST /index/users
- * is the bootstrap path until that lands.
+ * Query + internal index bootstrap / reindex endpoints.
+ * Live path: Kafka user.created/updated from identity outbox.
  */
 @Controller('v1/search')
 export class SearchController {

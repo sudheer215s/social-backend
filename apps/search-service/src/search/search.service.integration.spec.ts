@@ -78,4 +78,35 @@ describe('SearchService (integration)', () => {
     });
     expect(skip).toBe('skipped');
   });
+
+  it('indexes user.created and removes on user.deactivated', async () => {
+    if (!available) return;
+    const uid = randomUUID();
+    const uname = `evt_${unique}`;
+    const created = await svc.processDomainEvent({
+      eventType: 'user.created',
+      payload: {
+        userId: uid,
+        username: uname,
+        displayName: 'Evt User',
+        visibility: 'public',
+        status: 'active',
+        isVerified: false,
+        followerCount: 0,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    expect(created).toBe('handled');
+    await fetch(`${esUrl}/users_v1/_refresh`, { method: 'POST' });
+    const found = await svc.search(uname, 'user', 10);
+    expect(found.users.some((u) => u.id === uid)).toBe(true);
+
+    await svc.processDomainEvent({
+      eventType: 'user.deactivated',
+      payload: { userId: uid, status: 'deactivated' },
+    });
+    await fetch(`${esUrl}/users_v1/_refresh`, { method: 'POST' });
+    const gone = await svc.search(uname, 'user', 10);
+    expect(gone.users.some((u) => u.id === uid)).toBe(false);
+  });
 });

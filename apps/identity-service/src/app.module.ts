@@ -7,6 +7,11 @@ import {
 } from '@nestjs/common';
 import { checkDatabase, createPool } from '@social/platform-db';
 import {
+  createKafka,
+  createProducer,
+  startOutboxRelay,
+} from '@social/platform-events';
+import {
   createRedisClient,
   MemorySidRevocationStore,
   NoopSidRevocationStore,
@@ -15,6 +20,7 @@ import {
   type SidRevocationStore,
 } from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
+import type { Producer } from 'kafkajs';
 import type { Pool } from 'pg';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -145,19 +151,45 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
   ],
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
+  private producer: Producer | undefined;
+  private stopRelay: (() => void) | undefined;
+
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(REDIS) private readonly redis: RedisClient | null,
   ) {}
 
   async onModuleInit(): Promise<void> {
-    if (process.env.IDENTITY_SKIP_MIGRATE === '1') {
+    if (process.env.IDENTITY_SKIP_MIGRATE !== '1') {
+      await applyMigrations(this.pool, defaultMigrationsDir());
+    }
+    if (process.env.KAFKA_DISABLED === '1') {
       return;
     }
-    await applyMigrations(this.pool, defaultMigrationsDir());
+    try {
+      const kafka = createKafka('identity-service');
+      this.producer = await createProducer(kafka);
+      this.stopRelay = startOutboxRelay({
+        pool: this.pool,
+        schema: 'identity',
+        producer: this.producer,
+        intervalMs: 500,
+        onError: (err) => {
+          // eslint-disable-next-line no-console
+          console.error('[identity-outbox-relay]', err);
+        },
+      }).stop;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[identity-service] Kafka relay not started', err);
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.stopRelay?.();
+    if (this.producer) {
+      await this.producer.disconnect();
+    }
     await this.pool.end();
     if (this.redis) {
       this.redis.disconnect();
