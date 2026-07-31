@@ -100,7 +100,7 @@ Details and gates: [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap
 | ------------------------- | -------------------------------------------------------------- |
 | Architecture (v2)         | Documented and review-approved                                 |
 | Application code          | Monorepo: hello-service + platform-config + platform-telemetry |
-| Local multi-service stack | Planned in Phase 0                                             |
+| Local multi-service stack | Compose core up (Postgres + PgBouncer + Redis)                 |
 | Production deploy         | Not yet                                                        |
 
 This is a deliberate **design-first** repo: the hard distributed-systems choices (timeline algorithm, capacity model, consistency, authz) are specified before service code lands.

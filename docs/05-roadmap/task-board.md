@@ -18,7 +18,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 | **P0-T02** | pnpm workspace monorepo (`apps/` + `libs/`) | `pnpm install`; hello app builds from `apps/hello-service`; workspace packages resolve | Build + unit tests from monorepo layout             | `done` |
 | **P0-T03** | Root tooling: Turbo, scripts, path aliases  | `pnpm turbo typecheck test lint` runs all packages                                     | CI-local script smoke                               | `done` |
 | **P0-T04** | ESLint boundaries + Prettier + Husky        | Lint fails on illegal cross-app imports; pre-commit runs lint-staged                   | Fixture / lint smoke                                | `todo` |
-| **P0-T05** | GitHub Actions CI (static + unit)           | Workflow on PR/main: install, lint, typecheck, test                                    | Workflow present; local equivalent scripts          | `todo` |
+| **P0-T05** | GitHub Actions CI (static + unit)           | Workflow on PR/main: install, lint, typecheck, test                                    | Workflow present; local equivalent scripts          | `done` |
 
 ### Slice B — Platform libraries (core)
 
@@ -84,6 +84,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ## Current focus
 
-**Active:** Phase 0 Slice A remaining — CI (P0-T05), then Compose (P0-T13).
+**Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel) or P0-T09 (`platform-db`).
+**Completed:** P0-T01–T03, P0-T05–T08, P0-T12–T13.
 **Completed:** P0-T01–T03, P0-T06–T08, P0-T12.
 **Do not start Phase 1** until Compose + CI baseline exist (roadmap Phase 0).
