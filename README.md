@@ -126,6 +126,7 @@ nvm use
 pnpm install
 cp .env.example .env   # required for hello-service boot (validated config)
 pnpm compose:up        # Postgres :5432, PgBouncer :6432, Redis :6379
+pnpm docker:build:hello  # multi-stage distroless image for hello-service
 pnpm dev               # hello-service (watch)
 # GET /  GET /health/live  GET /health/ready
 ```
@@ -155,8 +156,9 @@ social-backend/
 │   ├── platform-config/           # fail-fast Zod config
 │   ├── platform-telemetry/        # Pino logger, redaction, health probes
 │   ├── platform-db/               # pg pool, Drizzle, transactions
-│   └── platform-grpc/             # client policy defaults (retry budget)
-├── docker/                        # Compose: Postgres, PgBouncer, Redis
+│   ├── platform-grpc/             # client policy defaults (retry budget)
+│   └── platform-testing/          # waitFor, withEnv, Docker helpers
+├── docker/                        # Compose + Dockerfile.hello-service
 ├── .github/workflows/ci.yml       # lint · typecheck · test · build · e2e
 ├── docs/                          # Architecture & roadmap (source of truth)
 ├── pnpm-workspace.yaml

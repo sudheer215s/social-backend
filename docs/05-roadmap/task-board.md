@@ -29,7 +29,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 | **P0-T08** | `platform-telemetry` (health)             | `/health/live` (process only) vs `/health/ready` (deps, cached 5s)                                | Unit/integration for live vs ready split | `done` |
 | **P0-T09** | `platform-db` skeleton                    | Drizzle client factory; pool max ≤ 10; timeouts documented                                        | Unit: config wiring                      | `done` |
 | **P0-T10** | `platform-grpc` skeleton                  | Client factory defaults: deadline, retry budget, breaker                                          | Unit: option defaults                    | `done` |
-| **P0-T11** | `platform-testing` skeleton               | Shared Jest helpers; Testcontainers helper (when Docker available)                                | Unit for helpers                         | `todo` |
+| **P0-T11** | `platform-testing` skeleton               | Shared Jest helpers; Testcontainers helper (when Docker available)                                | Unit for helpers                         | `done` |
 
 ### Slice C — Hello service + local stack
 
@@ -38,7 +38,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 | **P0-T12** | `hello-service` uses config + telemetry + health   | App boots only with valid env; live/ready + hello route | e2e: health endpoints   | `done` |
 | **P0-T13** | Docker Compose core (Postgres + PgBouncer + Redis) | `docker compose up` healthy                             | Compose healthchecks    | `done` |
 | **P0-T14** | Compose extended (Redpanda + ES + OTel)            | Full local stack starts                                 | Healthchecks green      | `todo` |
-| **P0-T15** | Multi-stage Dockerfile for apps                    | Image builds for `hello-service`                        | `docker build` succeeds | `todo` |
+| **P0-T15** | Multi-stage Dockerfile for apps                    | Image builds for `hello-service`                        | `docker build` succeeds | `done` |
 | **P0-T16** | `pnpm dev` clean-clone path                        | Documented & scripted                                   | Checklist in README     | `todo` |
 
 ### Phase 0 exit criteria (from roadmap)
@@ -84,6 +84,6 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ## Current focus
 
-**Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel), P0-T11 (platform-testing), P0-T15 (Dockerfile).
-**Completed:** P0-T01–T03, P0-T05–T10, P0-T12–T13.
+**Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel), P0-T16 (clean-clone path), P0-T04 (eslint boundaries).
+**Completed:** P0-T01–T03, P0-T05–T13, P0-T15 (+ workflow memory).
 

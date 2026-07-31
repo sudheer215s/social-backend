@@ -1,0 +1,39 @@
+# Multi-stage image for @social/hello-service (P0-T15).
+# Build from repo root:
+#   docker build -f docker/Dockerfile.hello-service -t social-hello:local .
+#
+# Uses `pnpm deploy` so workspace packages + prod deps resolve correctly.
+# Distroless runtime, non-root.
+
+FROM node:22-bookworm-slim AS base
+WORKDIR /app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json nest-cli.json ./
+COPY apps/hello-service/package.json apps/hello-service/tsconfig.json apps/hello-service/tsconfig.build.json apps/hello-service/nest-cli.json ./apps/hello-service/
+COPY libs/platform-config/package.json libs/platform-config/tsconfig.json libs/platform-config/tsconfig.build.json ./libs/platform-config/
+COPY libs/platform-telemetry/package.json libs/platform-telemetry/tsconfig.json libs/platform-telemetry/tsconfig.build.json ./libs/platform-telemetry/
+COPY libs/platform-db/package.json libs/platform-db/tsconfig.json libs/platform-db/tsconfig.build.json ./libs/platform-db/
+COPY libs/platform-grpc/package.json libs/platform-grpc/tsconfig.json libs/platform-grpc/tsconfig.build.json ./libs/platform-grpc/
+COPY libs/platform-testing/package.json libs/platform-testing/tsconfig.json libs/platform-testing/tsconfig.build.json ./libs/platform-testing/
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
+COPY apps/hello-service ./apps/hello-service
+COPY libs ./libs
+COPY eslint.config.mjs .prettierrc ./
+RUN pnpm turbo build --filter=@social/hello-service...
+# Portable prod tree: app dist + workspace packages + production node_modules
+RUN pnpm --filter @social/hello-service deploy --prod /out
+
+FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
+WORKDIR /app
+COPY --from=build /out/ ./
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+# deploy layout: package root with dist/main.js
+CMD ["dist/main.js"]
