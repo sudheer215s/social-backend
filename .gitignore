@@ -5,6 +5,7 @@
 **/node_modules
 /build
 .turbo
+*.tsbuildinfo
 
 # Logs
 logs
@@ -17,9 +18,11 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Tests
+# Tests / coverage
 /coverage
+**/coverage
 /.nyc_output
 
 # IDEs and editors
@@ -30,24 +33,33 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
+*.swp
+*.swo
+*~
 
-# IDE - VSCode
+# IDE - VSCode (keep shared launch/settings optional)
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# Secrets and local environment (never commit)
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+**/secrets/
 
 # temp directory
 .temp
 .tmp
+tmp/
+temp/
 
 # Runtime data
 pids
@@ -57,4 +69,39 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Local AI / agent tooling (not standard enterprise deliverables)
+# Session memory, TUI config, and assistant rules stay on the machine only.
+# ---------------------------------------------------------------------------
+.grok/
+.claude/
+.cursor/
+.codex/
+.agents/
+.gemini/
+.continue/
+.windsurf/
+.aider*
+.repomix*
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md
+.cursorrules
+.cursorignore
+**/*MEMORY*.md
+**/MEMORY.md
+docs/05-roadmap/PROGRESS.md
+
+# Local WIP not yet part of the backend product surface
+docs/frontend/
+
+# Local Docker / data dumps (if ever written under the repo)
+docker/data/
+*.sql.gz
+*.dump
+
+# Optional local override compose / env
+docker-compose.override.yml
+compose.override.yml
