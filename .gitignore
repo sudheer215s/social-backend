@@ -93,6 +93,8 @@ GEMINI.md
 **/*MEMORY*.md
 **/MEMORY.md
 docs/05-roadmap/PROGRESS.md
+docs/05-roadmap/WORKFLOW.md
+docs/05-roadmap/task-board.md
 
 # Local WIP not yet part of the backend product surface
 docs/frontend/
