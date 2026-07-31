@@ -7,18 +7,23 @@ export class IdentityProxy {
   async forward(
     method: string,
     path: string,
-    body?: unknown,
+    options?: { body?: unknown; authorization?: string },
   ): Promise<{ status: number; json: unknown }> {
-    const init: RequestInit = {
-      method,
-      headers:
-        body !== undefined
-          ? { 'content-type': 'application/json', accept: 'application/json' }
-          : { accept: 'application/json' },
+    const headers: Record<string, string> = {
+      accept: 'application/json',
     };
-    if (body !== undefined) {
-      init.body = JSON.stringify(body);
+    if (options?.body !== undefined) {
+      headers['content-type'] = 'application/json';
     }
+    if (options?.authorization) {
+      headers.authorization = options.authorization;
+    }
+
+    const init: RequestInit = { method, headers };
+    if (options?.body !== undefined) {
+      init.body = JSON.stringify(options.body);
+    }
+
     const res = await fetch(`${this.baseUrl}${path}`, init);
     const text = await res.text();
     let json: unknown = null;

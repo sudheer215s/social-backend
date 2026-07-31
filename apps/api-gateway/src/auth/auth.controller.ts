@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   HttpException,
+  Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -18,9 +20,9 @@ export class AuthController {
   private async forward(
     method: string,
     path: string,
-    body?: unknown,
+    options?: { body?: unknown; authorization?: string },
   ): Promise<unknown> {
-    const { status, json } = await this.identity.forward(method, path, body);
+    const { status, json } = await this.identity.forward(method, path, options);
     if (status >= 400) {
       throw new HttpException(
         (json as object) ?? { message: 'Upstream error' },
@@ -30,39 +32,44 @@ export class AuthController {
     return json;
   }
 
+  private bearer(req: AuthedRequest): string | undefined {
+    const h = req.headers.authorization;
+    return typeof h === 'string' ? h : undefined;
+  }
+
   @Post('v1/auth/register')
   register(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/register', body);
+    return this.forward('POST', '/v1/auth/register', { body });
   }
 
   @Post('v1/auth/login')
   login(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/login', body);
+    return this.forward('POST', '/v1/auth/login', { body });
   }
 
   @Post('v1/auth/refresh')
   refresh(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/refresh', body);
+    return this.forward('POST', '/v1/auth/refresh', { body });
   }
 
   @Post('v1/auth/logout')
   logout(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/logout', body);
+    return this.forward('POST', '/v1/auth/logout', { body });
   }
 
   @Post('v1/auth/verify-email')
   verifyEmail(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/verify-email', body);
+    return this.forward('POST', '/v1/auth/verify-email', { body });
   }
 
   @Post('v1/auth/password/forgot')
   forgotPassword(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/password/forgot', body);
+    return this.forward('POST', '/v1/auth/password/forgot', { body });
   }
 
   @Post('v1/auth/password/reset')
   resetPassword(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/password/reset', body);
+    return this.forward('POST', '/v1/auth/password/reset', { body });
   }
 
   @Get('v1/auth/jwks')
@@ -75,10 +82,41 @@ export class AuthController {
     return this.forward('GET', '/.well-known/jwks.json');
   }
 
-  /** Authenticated whoami — proves gateway JWT verification. */
-  @Get('v1/me')
+  /** Authenticated private profile (includes email). */
+  @Get('v1/users/me')
   @UseGuards(AuthGuard)
   me(@Req() req: AuthedRequest) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'GET',
+      '/v1/users/me',
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Patch('v1/users/me')
+  @UseGuards(AuthGuard)
+  updateMe(@Req() req: AuthedRequest, @Body() body: unknown) {
+    const authorization = this.bearer(req);
+    return this.forward('PATCH', '/v1/users/me', {
+      body,
+      ...(authorization ? { authorization } : {}),
+    });
+  }
+
+  /** Public profile by username. */
+  @Get('v1/users/by-username/:username')
+  byUsername(@Param('username') username: string) {
+    return this.forward(
+      'GET',
+      `/v1/users/by-username/${encodeURIComponent(username)}`,
+    );
+  }
+
+  /** Token claims only (compat with earlier gateway whoami). */
+  @Get('v1/me')
+  @UseGuards(AuthGuard)
+  claims(@Req() req: AuthedRequest) {
     return {
       userId: req.user?.userId,
       sessionId: req.user?.sessionId,

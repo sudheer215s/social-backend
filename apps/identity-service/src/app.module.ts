@@ -11,18 +11,21 @@ import type { Pool } from 'pg';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { EmailTokenService } from './auth/email-token.service';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { ConsoleEmailAdapter } from './email/console-email.adapter';
 import { HealthController } from './health.controller';
 import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
 import { SessionService } from './tokens/session.service';
+import { UsersController } from './users/users.controller';
+import { UsersService } from './users/users.service';
 
 export const PG_POOL = Symbol('PG_POOL');
 export const JWT_KEYS = Symbol('JWT_KEYS');
 
 @Global()
 @Module({
-  controllers: [AuthController, HealthController],
+  controllers: [AuthController, UsersController, HealthController],
   providers: [
     {
       provide: PG_POOL,
@@ -73,14 +76,21 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
       ) => new AuthService(pool, sessions, emailTokens, email),
     },
     {
+      provide: UsersService,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new UsersService(pool),
+    },
+    {
       provide: JwtKeyRing,
       inject: [JWT_KEYS],
       useFactory: (keys: JwtKeyRing) => keys,
     },
+    JwtAuthGuard,
   ],
   exports: [
     PG_POOL,
     AuthService,
+    UsersService,
     JwtKeyRing,
     SessionService,
     ConsoleEmailAdapter,
