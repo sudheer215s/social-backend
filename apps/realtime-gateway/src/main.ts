@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
+import type { RedisClient } from '@social/platform-redis';
 import { createLogger } from '@social/platform-telemetry';
-import { AppModule } from './app.module';
+import { AppModule, REDIS } from './app.module';
+import { attachRealtimeWebSocket } from './realtime/ws.gateway';
+import { TicketService } from './ticket/ticket.service';
 
 async function bootstrap(): Promise<void> {
   const log = createLogger({
@@ -10,10 +13,15 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
-  // Long-lived SSE connections — disable request timeout at Nest level
   const port = process.env.PORT ?? '3007';
   await app.listen(port);
-  log.info({ port }, 'realtime-gateway listening');
+
+  const httpServer = app.getHttpServer() as import('node:http').Server;
+  const redis = app.get<RedisClient>(REDIS);
+  const tickets = app.get(TicketService);
+  attachRealtimeWebSocket({ server: httpServer, redis, tickets });
+
+  log.info({ port }, 'realtime-gateway listening (SSE + WebSocket)');
 }
 
 void bootstrap();

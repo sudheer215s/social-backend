@@ -152,4 +152,25 @@ export class GraphService {
     );
     return (r.rowCount ?? 0) > 0;
   }
+
+  /**
+   * Users either side of a block with viewer — fail closed at hydration.
+   */
+  async listBlockedRelatedIds(userId: string): Promise<string[]> {
+    const rows = await this.pool.query<{ other_id: string }>(
+      `SELECT blocked_id AS other_id FROM graph.blocks WHERE blocker_id = $1
+       UNION
+       SELECT blocker_id AS other_id FROM graph.blocks WHERE blocked_id = $1`,
+      [userId],
+    );
+    return rows.rows.map((r) => r.other_id);
+  }
+
+  async followerCount(userId: string): Promise<number> {
+    const r = await this.pool.query<{ c: string }>(
+      `SELECT count(*)::text AS c FROM graph.follows WHERE followee_id = $1`,
+      [userId],
+    );
+    return Number(r.rows[0]?.c ?? 0);
+  }
 }

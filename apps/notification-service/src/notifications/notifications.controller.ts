@@ -5,8 +5,10 @@ import {
   Post,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtAuthGuard, type AuthedRequest } from '../auth/jwt.guard';
 import { NotificationsService } from './notifications.service';
 
@@ -31,14 +33,18 @@ export class NotificationsController {
     return { unreadCount: await this.notifications.unreadCount(req.userId!) };
   }
 
+  /**
+   * Batch hydrate by id. Auth: service token + x-user-id (realtime-gateway).
+   * Dev: x-user-id alone when REALTIME_SERVICE_TOKEN is unset.
+   */
   @Get('batch')
-  @UseGuards(JwtAuthGuard)
-  async batch(@Req() req: AuthedRequest, @Query('ids') ids?: string) {
+  async batch(@Req() req: Request, @Query('ids') ids?: string) {
+    const userId = resolveBatchUserId(req);
     const list = (ids ?? '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    const items = await this.notifications.getByIds(req.userId!, list);
+    const items = await this.notifications.getByIds(userId, list);
     return { items };
   }
 
@@ -48,4 +54,23 @@ export class NotificationsController {
     const updated = await this.notifications.markRead(req.userId!, body?.ids);
     return { updated };
   }
+}
+
+function resolveBatchUserId(req: Request): string {
+  const expected = process.env.REALTIME_SERVICE_TOKEN;
+  const serviceToken = req.headers['x-service-token'];
+  const headerUser = req.headers['x-user-id'];
+  if (
+    expected &&
+    typeof serviceToken === 'string' &&
+    serviceToken === expected &&
+    typeof headerUser === 'string' &&
+    headerUser.length > 0
+  ) {
+    return headerUser;
+  }
+  if (!expected && typeof headerUser === 'string' && headerUser.length > 0) {
+    return headerUser;
+  }
+  throw new UnauthorizedException('batch requires x-service-token + x-user-id');
 }

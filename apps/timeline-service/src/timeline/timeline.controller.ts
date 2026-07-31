@@ -13,17 +13,30 @@ export class TimelineController {
     @Query('limit') limit?: string,
     @Query('before') before?: string,
   ) {
+    const pageLimit = limit ? Number(limit) : 20;
     const page = await this.timelines.getHomeTimeline(
       req.userId!,
-      limit ? Number(limit) : 20,
+      pageLimit,
       before,
     );
-    const posts = await this.timelines.hydratePosts(page.postIds);
+    const { posts, filtered } = await this.timelines.hydratePosts(
+      req.userId!,
+      page.postIds,
+      pageLimit,
+    );
+    const postIds = posts
+      .map((p) =>
+        p && typeof p === 'object' && 'id' in p
+          ? String((p as { id: string }).id)
+          : '',
+      )
+      .filter(Boolean);
     return {
       posts,
-      postIds: page.postIds,
+      postIds,
       rebuilt: page.rebuilt,
-      nextCursor: page.postIds[page.postIds.length - 1] ?? null,
+      filtered,
+      nextCursor: postIds[postIds.length - 1] ?? null,
     };
   }
 }

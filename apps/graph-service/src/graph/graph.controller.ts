@@ -67,6 +67,35 @@ export class GraphController {
     return { ids };
   }
 
+  @Get('followers/:userId/count')
+  async followerCount(@Param('userId') userId: string) {
+    return { count: await this.graph.followerCount(userId) };
+  }
+
+  /**
+   * Users blocked by or blocking viewer (for hydration fail-closed filter).
+   */
+  @Get('blocks/:userId/related-ids')
+  @UseGuards(JwtAuthGuard)
+  async blockedRelated(
+    @Req() req: AuthedRequest,
+    @Param('userId') userId: string,
+  ) {
+    // Only the subject (or future admin) may read their block set
+    if (req.userId !== userId) {
+      return { ids: [] as string[] };
+    }
+    const ids = await this.graph.listBlockedRelatedIds(userId);
+    return { ids };
+  }
+
+  /** Internal hydrate helper (timeline-service). No JWT — network-private. */
+  @Get('blocks/:userId/related-ids/internal')
+  async blockedRelatedInternal(@Param('userId') userId: string) {
+    const ids = await this.graph.listBlockedRelatedIds(userId);
+    return { ids };
+  }
+
   @Post('blocks/:userId')
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)

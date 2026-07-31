@@ -1,19 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import type { TimelineStore } from './timeline.store';
 
+/** Accounts at/above this follower count skip write fan-out (pull on read). */
+const DEFAULT_LARGE_THRESHOLD = 10_000;
+
 @Injectable()
 export class TimelineService {
+  private readonly largeThreshold: number;
+
   constructor(
     private readonly store: TimelineStore,
     private readonly graphBaseUrl: string,
     private readonly postBaseUrl: string,
-  ) {}
+  ) {
+    const raw = Number(
+      process.env.LARGE_ACCOUNT_FOLLOWER_THRESHOLD ?? DEFAULT_LARGE_THRESHOLD,
+    );
+    this.largeThreshold =
+      Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_LARGE_THRESHOLD;
+  }
 
   async fanoutPost(authorId: string, postId: string): Promise<number> {
     // Always try author self-timeline if materialised
     let written = 0;
     if (await this.store.fanoutIfExists(authorId, postId)) {
       written += 1;
+    }
+    // Celebrity / large-account: skip O(followers) write fan-out
+    if (await this.isLargeAccount(authorId)) {
+      return written;
     }
     const followers = await this.fetchFollowerIds(authorId);
     for (const fid of followers) {
@@ -57,31 +72,81 @@ export class TimelineService {
       await this.rebuild(userId);
       rebuilt = true;
     }
-    const postIds = await this.store.page(userId, limit, before);
-    // If still empty after rebuild, return empty
+    // Over-fetch so block filter at hydration can still fill a page
+    const fetchLimit = Math.min(Math.max(limit * 3, limit), 100);
+    let postIds = await this.store.page(userId, fetchLimit, before);
+
+    // Pull recent posts from large accounts the user follows (hybrid fan-out)
+    const pulled = await this.pullLargeFollowing(userId, limit);
+    if (pulled.length > 0) {
+      const set = new Set(postIds);
+      for (const id of pulled) {
+        if (!set.has(id)) {
+          postIds.push(id);
+          set.add(id);
+        }
+      }
+      postIds.sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+      if (before) {
+        postIds = postIds.filter((id) => id < before);
+      }
+    }
+
     if (postIds.length === 0 && !rebuilt) {
       await this.rebuild(userId);
       rebuilt = true;
-      return { postIds: await this.store.page(userId, limit, before), rebuilt };
+      postIds = await this.store.page(userId, fetchLimit, before);
     }
     return { postIds, rebuilt };
   }
 
-  async hydratePosts(postIds: string[]): Promise<unknown[]> {
-    if (postIds.length === 0) return [];
+  /**
+   * Hydrate posts and fail-closed filter blocked authors.
+   * Returns at most `limit` posts after filtering.
+   */
+  async hydratePosts(
+    viewerId: string,
+    postIds: string[],
+    limit = 20,
+  ): Promise<{ posts: unknown[]; filtered: number }> {
+    if (postIds.length === 0) return { posts: [], filtered: 0 };
     const res = await fetch(
       `${this.postBaseUrl}/v1/posts/batch?ids=${encodeURIComponent(postIds.join(','))}`,
     );
-    if (!res.ok) return [];
-    const json = (await res.json()) as { posts?: unknown[] };
-    return json.posts ?? [];
+    if (!res.ok) return { posts: [], filtered: 0 };
+    const json = (await res.json()) as {
+      posts?: Array<{ authorId?: string; id?: string }>;
+    };
+    const raw = json.posts ?? [];
+    const blocked = await this.fetchBlockedRelatedIds(viewerId);
+    if (blocked.size === 0) {
+      return { posts: raw.slice(0, limit), filtered: 0 };
+    }
+    const posts: unknown[] = [];
+    let filtered = 0;
+    for (const p of raw) {
+      const authorId = typeof p.authorId === 'string' ? p.authorId : '';
+      if (authorId && blocked.has(authorId)) {
+        filtered += 1;
+        continue;
+      }
+      posts.push(p);
+      if (posts.length >= limit) break;
+    }
+    return { posts, filtered };
   }
 
   async rebuild(userId: string): Promise<void> {
     const following = await this.fetchFollowingIds(userId);
-    const authorIds = [userId, ...following].slice(0, 100);
+    // Exclude large accounts from materialised set (they are pulled on read)
+    const materialiseAuthors: string[] = [userId];
+    for (const authorId of following.slice(0, 100)) {
+      if (!(await this.isLargeAccount(authorId))) {
+        materialiseAuthors.push(authorId);
+      }
+    }
     const postIds: string[] = [];
-    for (const authorId of authorIds) {
+    for (const authorId of materialiseAuthors) {
       const res = await fetch(
         `${this.postBaseUrl}/v1/posts?authorId=${encodeURIComponent(authorId)}&limit=20`,
       );
@@ -93,9 +158,57 @@ export class TimelineService {
         postIds.push(p.id);
       }
     }
-    // Sort UUIDv7 descending (newest first)
     postIds.sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
     await this.store.replaceTimeline(userId, postIds.slice(0, 400));
+  }
+
+  private async isLargeAccount(userId: string): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `${this.graphBaseUrl}/v1/graph/followers/${encodeURIComponent(userId)}/count`,
+      );
+      if (!res.ok) return false;
+      const json = (await res.json()) as { count?: number };
+      return Number(json.count ?? 0) >= this.largeThreshold;
+    } catch {
+      return false;
+    }
+  }
+
+  private async pullLargeFollowing(
+    userId: string,
+    limit: number,
+  ): Promise<string[]> {
+    const following = await this.fetchFollowingIds(userId);
+    const large: string[] = [];
+    for (const id of following.slice(0, 50)) {
+      if (await this.isLargeAccount(id)) {
+        large.push(id);
+      }
+      if (large.length >= 10) break;
+    }
+    const postIds: string[] = [];
+    for (const authorId of large) {
+      const ids = await this.fetchRecentPostIds(authorId, Math.min(limit, 20));
+      postIds.push(...ids);
+    }
+    return postIds;
+  }
+
+  private async fetchBlockedRelatedIds(userId: string): Promise<Set<string>> {
+    // Internal unauthenticated path for service-to-service: query graph with
+    // a dedicated internal endpoint. Prefer the public related-ids if JWT
+    // is unavailable — use open internal list for hydration.
+    try {
+      const res = await fetch(
+        `${this.graphBaseUrl}/v1/graph/blocks/${encodeURIComponent(userId)}/related-ids/internal`,
+      );
+      if (!res.ok) return new Set();
+      const json = (await res.json()) as { ids?: string[] };
+      return new Set(json.ids ?? []);
+    } catch {
+      return new Set();
+    }
   }
 
   private async fetchFollowerIds(authorId: string): Promise<string[]> {
