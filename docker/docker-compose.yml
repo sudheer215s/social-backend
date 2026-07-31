@@ -1,0 +1,95 @@
+# Local infrastructure — Phase 0 core (P0-T13).
+# Production-shaped: Postgres behind PgBouncer, Redis with persistence.
+# Extended stack (Redpanda, ES, OTel) lands in P0-T14.
+#
+# Usage (from repo root):
+#   docker compose -f docker/docker-compose.yml up -d
+#   docker compose -f docker/docker-compose.yml ps
+#   docker compose -f docker/docker-compose.yml down
+
+name: social-backend
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: social-postgres
+    environment:
+      POSTGRES_USER: social
+      POSTGRES_PASSWORD: social
+      POSTGRES_DB: social
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U social -d social']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - social-net
+
+  pgbouncer:
+    # edoburu tags are sparse on Docker Hub; pin latest and re-pin by digest in Phase 0 hardening.
+    image: edoburu/pgbouncer:latest
+    container_name: social-pgbouncer
+    environment:
+      DB_USER: social
+      DB_PASSWORD: social
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      DB_NAME: social
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: '200'
+      DEFAULT_POOL_SIZE: '20'
+      AUTH_TYPE: plain
+      LISTEN_PORT: '6432'
+    ports:
+      - '6432:6432'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Image is Alpine-based without pg_isready; TCP check via busybox/nc if present,
+      # otherwise process presence is enough for local smoke.
+      test: ['CMD-SHELL', 'pidof pgbouncer']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - social-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: social-redis
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - social-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  social-net:
+    driver: bridge

@@ -16,7 +16,11 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "format:check": "prettier --check \"apps/**/*.ts\" \"libs/**/*.ts\"",
-    "dev": "turbo run dev --filter=@social/hello-service"
+    "dev": "turbo run dev --filter=@social/hello-service",
+    "compose:up": "docker compose -f docker/docker-compose.yml up -d",
+    "compose:down": "docker compose -f docker/docker-compose.yml down",
+    "compose:ps": "docker compose -f docker/docker-compose.yml ps",
+    "compose:check": "bash scripts/check-compose.sh"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

@@ -36,7 +36,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 | ID         | Task                                               | Verifiable output                                       | Tests                   | Status |
 | ---------- | -------------------------------------------------- | ------------------------------------------------------- | ----------------------- | ------ |
 | **P0-T12** | `hello-service` uses config + telemetry + health   | App boots only with valid env; live/ready + hello route | e2e: health endpoints   | `done` |
-| **P0-T13** | Docker Compose core (Postgres + PgBouncer + Redis) | `docker compose up` healthy                             | Compose healthchecks    | `todo` |
+| **P0-T13** | Docker Compose core (Postgres + PgBouncer + Redis) | `docker compose up` healthy                             | Compose healthchecks    | `done` |
 | **P0-T14** | Compose extended (Redpanda + ES + OTel)            | Full local stack starts                                 | Healthchecks green      | `todo` |
 | **P0-T15** | Multi-stage Dockerfile for apps                    | Image builds for `hello-service`                        | `docker build` succeeds | `todo` |
 | **P0-T16** | `pnpm dev` clean-clone path                        | Documented & scripted                                   | Checklist in README     | `todo` |

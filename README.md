@@ -124,6 +124,7 @@ nvm use
 ```bash
 pnpm install
 cp .env.example .env   # required for hello-service boot (validated config)
+pnpm compose:up        # Postgres :5432, PgBouncer :6432, Redis :6379
 pnpm dev               # hello-service (watch)
 # GET /  GET /health/live  GET /health/ready
 ```
@@ -151,6 +152,8 @@ social-backend/
 ├── libs/
 │   ├── platform-config/           # fail-fast Zod config
 │   └── platform-telemetry/        # Pino logger, redaction, health probes
+├── docker/                        # Compose: Postgres, PgBouncer, Redis
+├── .github/workflows/ci.yml       # lint · typecheck · test · build · e2e
 ├── docs/                          # Architecture & roadmap (source of truth)
 ├── pnpm-workspace.yaml
 ├── turbo.json
