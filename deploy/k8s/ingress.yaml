@@ -1,0 +1,53 @@
+# NGINX Ingress Controller assumed (ingressClassName: nginx).
+# TLS: create secret social-tls or use cert-manager annotations.
+#
+#   kubectl -n social create secret tls social-tls \
+#     --cert=fullchain.pem --key=privkey.pem
+#
+# Realtime paths go to realtime-gateway (SSE/WebSocket long-lived).
+# Everything else hits api-gateway. More specific path first.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: social-api
+  namespace: social
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: '2m'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-http-version: '1.1'
+    # WebSocket / SSE upgrade support
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+    # Optional cert-manager:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.social.example.com
+      secretName: social-tls
+  rules:
+    - host: api.social.example.com
+      http:
+        paths:
+          # Long-lived realtime (ticket issue still via gateway HTTP API)
+          - path: /v1/realtime/stream
+            pathType: Prefix
+            backend:
+              service:
+                name: realtime-gateway
+                port: { number: 3007 }
+          - path: /v1/realtime/ws
+            pathType: Prefix
+            backend:
+              service:
+                name: realtime-gateway
+                port: { number: 3007 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port: { number: 3000 }

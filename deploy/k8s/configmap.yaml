@@ -7,8 +7,9 @@ data:
   NODE_ENV: production
   LOG_LEVEL: info
   JWT_AUDIENCE: api
+  DATABASE_POOL_MAX: '5'
   # Cluster-internal service DNS (adjust for your mesh/ingress)
-  JWT_ISSUER: http://identity-service.social.svc.cluster.local:3001
+  JWT_ISSUER: https://api.social.example.com
   IDENTITY_JWKS_URL: http://identity-service.social.svc.cluster.local:3001/.well-known/jwks.json
   IDENTITY_BASE_URL: http://identity-service.social.svc.cluster.local:3001
   IDENTITY_GRPC_URL: identity-service.social.svc.cluster.local:50051
@@ -18,11 +19,7 @@ data:
   NOTIFICATION_BASE_URL: http://notification-service.social.svc.cluster.local:3005
   SEARCH_BASE_URL: http://search-service.social.svc.cluster.local:3006
   REALTIME_BASE_URL: http://realtime-gateway.social.svc.cluster.local:3007
-  # Infrastructure endpoints — replace with managed services / in-cluster operators
-  DATABASE_URL: postgres://social:social@pgbouncer.social.svc.cluster.local:6432/social
-  DATABASE_POOL_MAX: '5'
-  REDIS_URL: redis://redis.social.svc.cluster.local:6379
+  # Non-secret infra endpoints (hostnames only). Credentials live in social-secrets.
   KAFKA_BROKERS: redpanda.social.svc.cluster.local:9092
   ELASTICSEARCH_URL: http://elasticsearch.social.svc.cluster.local:9200
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.social.svc.cluster.local:4318
-  REALTIME_SERVICE_TOKEN: change-me

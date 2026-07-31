@@ -1,0 +1,31 @@
+# Keep at least one pod during voluntary disruptions (rollouts, drains).
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway
+  namespace: social
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: api-gateway }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: realtime-gateway
+  namespace: social
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: realtime-gateway }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: identity-service
+  namespace: social
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: identity-service }

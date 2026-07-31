@@ -42,7 +42,7 @@
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
     "routes:list": "node scripts/list-routes.mjs",
     "openapi:export": "node scripts/export-openapi.mjs",
-    "k8s:apply": "kubectl apply -f deploy/k8s/namespace.yaml -f deploy/k8s/configmap.yaml -f deploy/k8s/apps.yaml"
+    "k8s:apply": "kubectl apply -k deploy/k8s/"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
