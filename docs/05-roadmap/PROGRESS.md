@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-31  
 **Repo:** https://github.com/sudheer215s/social-backend  
 **Branch:** `main`  
-**HEAD:** (set after commit)
+**HEAD:** `0aa82a6` — feat(P1-T03/T04): EdDSA access tokens, JWKS, and refresh reuse detection
 
 ## Workflow
 ```
