@@ -241,4 +241,66 @@ export class ContentController {
       authorization ? { authorization } : {},
     );
   }
+
+  @Get('v1/notifications')
+  @UseGuards(AuthGuard)
+  listNotifications(@Req() req: AuthedRequest, @Query('limit') limit?: string) {
+    const authorization = this.bearer(req);
+    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    return this.forward(
+      'NOTIFICATION_BASE_URL',
+      'http://127.0.0.1:3005',
+      'GET',
+      `/v1/notifications${q}`,
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Get('v1/notifications/unread-count')
+  @UseGuards(AuthGuard)
+  unreadCount(@Req() req: AuthedRequest) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'NOTIFICATION_BASE_URL',
+      'http://127.0.0.1:3005',
+      'GET',
+      '/v1/notifications/unread-count',
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Post('v1/notifications/read')
+  @UseGuards(AuthGuard)
+  markNotificationsRead(@Req() req: AuthedRequest, @Body() body: unknown) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'NOTIFICATION_BASE_URL',
+      'http://127.0.0.1:3005',
+      'POST',
+      '/v1/notifications/read',
+      {
+        body,
+        ...(authorization ? { authorization } : {}),
+      },
+    );
+  }
+
+  @Get('v1/search')
+  search(
+    @Query('q') q: string,
+    @Query('type') type?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (type) params.set('type', type);
+    if (limit) params.set('limit', limit);
+    const qs = params.toString() ? `?${params}` : '';
+    return this.forward(
+      'SEARCH_BASE_URL',
+      'http://127.0.0.1:3006',
+      'GET',
+      `/v1/search${qs}`,
+    );
+  }
 }

@@ -155,13 +155,15 @@ export class PostsService {
 
   async like(postId: string, userId: string): Promise<PostDto> {
     return withTransaction(this.pool, async (client) => {
-      const post = await client.query(
-        `SELECT id FROM post.posts WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
+      const post = await client.query<{ id: string; author_id: string }>(
+        `SELECT id, author_id FROM post.posts
+         WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`,
         [postId],
       );
       if ((post.rowCount ?? 0) === 0) {
         throw new NotFoundException('Post not found');
       }
+      const authorId = post.rows[0]!.author_id;
       const inserted = await client.query(
         `INSERT INTO post.likes (post_id, user_id)
          VALUES ($1, $2)
@@ -174,6 +176,18 @@ export class PostsService {
           `UPDATE post.posts SET like_count = like_count + 1 WHERE id = $1`,
           [postId],
         );
+        await appendOutbox(client, 'post', {
+          aggregateType: 'post',
+          aggregateId: postId,
+          eventType: 'post.liked',
+          partitionKey: authorId,
+          topic: POST_TOPIC,
+          payload: {
+            postId,
+            authorId,
+            userId,
+          },
+        });
       }
       const row = await client.query(
         `SELECT id, author_id, content, media_refs, reply_to_id, thread_root_id,

@@ -1,0 +1,45 @@
+{
+  "name": "@social/search-service",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Elasticsearch indexing and query (posts + users)",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "jest --passWithNoTests",
+    "test:integration": "jest --config ./test/jest.integration.config.js --runInBand"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "@social/platform-events": "workspace:*",
+    "@social/platform-telemetry": "workspace:*",
+    "kafkajs": "^2.2.4",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.7",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "testPathIgnorePatterns": [".*\\.integration\\.spec\\.ts$"],
+    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+    "testEnvironment": "node"
+  }
+}

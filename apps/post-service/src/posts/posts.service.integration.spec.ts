@@ -45,6 +45,14 @@ describe('PostsService (integration)', () => {
     const likedAgain = await posts.like(created.id, otherId);
     expect(likedAgain.likeCount).toBe(1);
 
+    const likeOutbox = await pool.query<{ event_type: string; c: string }>(
+      `SELECT event_type, count(*)::text AS c FROM post.outbox
+       WHERE aggregate_id = $1 AND event_type = 'post.liked'
+       GROUP BY event_type`,
+      [created.id],
+    );
+    expect(Number(likeOutbox.rows[0]?.c ?? 0)).toBe(1);
+
     const unliked = await posts.unlike(created.id, otherId);
     expect(unliked.likeCount).toBe(0);
 
