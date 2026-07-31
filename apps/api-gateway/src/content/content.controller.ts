@@ -221,6 +221,34 @@ export class ContentController {
     );
   }
 
+  @Post('v1/graph/mutes/:userId')
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  mute(@Req() req: AuthedRequest, @Param('userId') userId: string) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'GRAPH_BASE_URL',
+      'http://127.0.0.1:3003',
+      'POST',
+      `/v1/graph/mutes/${userId}`,
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Delete('v1/graph/mutes/:userId')
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  unmute(@Req() req: AuthedRequest, @Param('userId') userId: string) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'GRAPH_BASE_URL',
+      'http://127.0.0.1:3003',
+      'DELETE',
+      `/v1/graph/mutes/${userId}`,
+      authorization ? { authorization } : {},
+    );
+  }
+
   @Get('v1/timelines/home')
   @UseGuards(AuthGuard)
   home(

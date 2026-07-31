@@ -47,7 +47,7 @@ describe('TimelineService.backfillOnFollow', () => {
 });
 
 describe('TimelineService.hydratePosts', () => {
-  it('filters blocked authors fail-closed', async () => {
+  it('filters blocked and muted authors fail-closed', async () => {
     const store = {} as TimelineStore;
     const fetchMock = jest.fn(async (url: string) => {
       if (url.includes('/posts/batch')) {
@@ -57,7 +57,8 @@ describe('TimelineService.hydratePosts', () => {
             posts: [
               { id: 'p1', authorId: 'good' },
               { id: 'p2', authorId: 'blocked-user' },
-              { id: 'p3', authorId: 'good2' },
+              { id: 'p3', authorId: 'muted-user' },
+              { id: 'p4', authorId: 'good2' },
             ],
           }),
         };
@@ -66,6 +67,12 @@ describe('TimelineService.hydratePosts', () => {
         return {
           ok: true,
           json: async () => ({ ids: ['blocked-user'] }),
+        };
+      }
+      if (url.includes('/mutes/')) {
+        return {
+          ok: true,
+          json: async () => ({ ids: ['muted-user'] }),
         };
       }
       return { ok: false, json: async () => ({}) };
@@ -78,11 +85,12 @@ describe('TimelineService.hydratePosts', () => {
         'p1',
         'p2',
         'p3',
+        'p4',
       ]);
-      expect(filtered).toBe(1);
+      expect(filtered).toBe(2);
       expect(posts).toHaveLength(2);
       expect((posts[0] as { id: string }).id).toBe('p1');
-      expect((posts[1] as { id: string }).id).toBe('p3');
+      expect((posts[1] as { id: string }).id).toBe('p4');
     } finally {
       globalThis.fetch = original;
     }

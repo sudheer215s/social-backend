@@ -7,9 +7,11 @@ import {
 } from '@nestjs/common';
 import { checkDatabase, createPool } from '@social/platform-db';
 import {
+  createConsumer,
   createKafka,
   createProducer,
   startOutboxRelay,
+  startReliableConsumer,
 } from '@social/platform-events';
 import {
   createRedisClient,
@@ -20,12 +22,13 @@ import {
   type SidRevocationStore,
 } from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
-import type { Producer } from 'kafkajs';
+import type { Consumer, Producer } from 'kafkajs';
 import type { Pool } from 'pg';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { EmailTokenService } from './auth/email-token.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { CounterService } from './counters/counter.service';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { ConsoleEmailAdapter } from './email/console-email.adapter';
 import { HealthController } from './health.controller';
@@ -135,6 +138,11 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
         new UsersService(pool, sessions),
     },
     {
+      provide: CounterService,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new CounterService(pool),
+    },
+    {
       provide: JwtKeyRing,
       inject: [JWT_KEYS],
       useFactory: (keys: JwtKeyRing) => keys,
@@ -152,11 +160,14 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
   private producer: Producer | undefined;
+  private counterConsumer: Consumer | undefined;
   private stopRelay: (() => void) | undefined;
+  private stopCounter: (() => Promise<void>) | undefined;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(REDIS) private readonly redis: RedisClient | null,
+    @Inject(CounterService) private readonly counters: CounterService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -186,14 +197,41 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
           );
         },
       }).stop;
+
+      this.counterConsumer = await createConsumer(kafka, 'identity-counters');
+      this.stopCounter = await startReliableConsumer({
+        consumer: this.counterConsumer,
+        producer: this.producer,
+        topics: ['social.graph.v1'],
+        consumerGroup: 'identity-counters',
+        handler: async (envelope) => {
+          await this.counters.processDomainEvent({
+            eventId: envelope.eventId,
+            eventType: envelope.eventType,
+            payload: envelope.payload,
+          });
+        },
+        onDlq: (info) => {
+          // eslint-disable-next-line no-console
+          console.error(
+            `[identity-counters-dlq] ${info.errorClass}: ${info.errorMessage}`,
+            info.envelope.eventId,
+          );
+        },
+        onError: (err) => {
+          // eslint-disable-next-line no-console
+          console.error('[identity-counters]', err);
+        },
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn('[identity-service] Kafka relay not started', err);
+      console.warn('[identity-service] Kafka not fully started', err);
     }
   }
 
   async onModuleDestroy(): Promise<void> {
     this.stopRelay?.();
+    if (this.stopCounter) await this.stopCounter();
     if (this.producer) {
       await this.producer.disconnect();
     }

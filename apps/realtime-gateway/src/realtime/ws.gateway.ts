@@ -114,17 +114,30 @@ async function handleConnection(
   });
 
   try {
-    await runDeliverySession({
+    const reason = await runDeliverySession({
       redis: options.redis,
       tickets: options.tickets,
       userId: payload.userId,
       connId,
       connRef,
+      ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
       ...(since !== undefined && since !== null ? { since } : {}),
       send: (frame) => send(ws, frame),
       isClosed: () => closed || ws.readyState !== ws.OPEN,
+      onSessionEnd: () => {
+        closed = true;
+      },
       evicted: evicted.length > 0,
     });
+    if (ws.readyState === ws.OPEN) {
+      if (reason === 'session_revoked') {
+        ws.close(4403, 'session revoked');
+      } else if (reason === 'reauthenticate') {
+        ws.close(4408, 'reauthenticate');
+      } else {
+        ws.close(1000, 'session end');
+      }
+    }
   } finally {
     closed = true;
     if (ws.readyState === ws.OPEN) {

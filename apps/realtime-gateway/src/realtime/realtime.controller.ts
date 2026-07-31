@@ -87,9 +87,13 @@ export class RealtimeController {
         userId: payload.userId,
         connId,
         connRef,
+        ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
         ...(since !== undefined ? { since } : {}),
         send: write,
         isClosed: () => closed,
+        onSessionEnd: () => {
+          closed = true;
+        },
         evicted: evicted.length > 0,
       });
     } finally {

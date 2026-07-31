@@ -173,4 +173,31 @@ export class GraphService {
     );
     return Number(r.rows[0]?.c ?? 0);
   }
+
+  async mute(muterId: string, mutedId: string): Promise<void> {
+    if (muterId === mutedId) {
+      throw new BadRequestException('Cannot mute yourself');
+    }
+    await this.pool.query(
+      `INSERT INTO graph.mutes (muter_id, muted_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [muterId, mutedId],
+    );
+  }
+
+  async unmute(muterId: string, mutedId: string): Promise<void> {
+    await this.pool.query(
+      `DELETE FROM graph.mutes WHERE muter_id = $1 AND muted_id = $2`,
+      [muterId, mutedId],
+    );
+  }
+
+  async listMutedIds(muterId: string): Promise<string[]> {
+    const rows = await this.pool.query<{ muted_id: string }>(
+      `SELECT muted_id FROM graph.mutes WHERE muter_id = $1`,
+      [muterId],
+    );
+    return rows.rows.map((r) => r.muted_id);
+  }
 }

@@ -101,7 +101,7 @@ export class TimelineService {
   }
 
   /**
-   * Hydrate posts and fail-closed filter blocked authors.
+   * Hydrate posts and fail-closed filter blocked + muted authors.
    * Returns at most `limit` posts after filtering.
    */
   async hydratePosts(
@@ -118,15 +118,15 @@ export class TimelineService {
       posts?: Array<{ authorId?: string; id?: string }>;
     };
     const raw = json.posts ?? [];
-    const blocked = await this.fetchBlockedRelatedIds(viewerId);
-    if (blocked.size === 0) {
+    const suppressed = await this.fetchSuppressedAuthorIds(viewerId);
+    if (suppressed.size === 0) {
       return { posts: raw.slice(0, limit), filtered: 0 };
     }
     const posts: unknown[] = [];
     let filtered = 0;
     for (const p of raw) {
       const authorId = typeof p.authorId === 'string' ? p.authorId : '';
-      if (authorId && blocked.has(authorId)) {
+      if (authorId && suppressed.has(authorId)) {
         filtered += 1;
         continue;
       }
@@ -195,19 +195,29 @@ export class TimelineService {
     return postIds;
   }
 
-  private async fetchBlockedRelatedIds(userId: string): Promise<Set<string>> {
-    // Internal unauthenticated path for service-to-service: query graph with
-    // a dedicated internal endpoint. Prefer the public related-ids if JWT
-    // is unavailable — use open internal list for hydration.
-    try {
-      const res = await fetch(
+  private async fetchSuppressedAuthorIds(userId: string): Promise<Set<string>> {
+    const set = new Set<string>();
+    await Promise.all([
+      this.fetchIdSet(
         `${this.graphBaseUrl}/v1/graph/blocks/${encodeURIComponent(userId)}/related-ids/internal`,
-      );
-      if (!res.ok) return new Set();
+        set,
+      ),
+      this.fetchIdSet(
+        `${this.graphBaseUrl}/v1/graph/mutes/${encodeURIComponent(userId)}/ids/internal`,
+        set,
+      ),
+    ]);
+    return set;
+  }
+
+  private async fetchIdSet(url: string, into: Set<string>): Promise<void> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return;
       const json = (await res.json()) as { ids?: string[] };
-      return new Set(json.ids ?? []);
+      for (const id of json.ids ?? []) into.add(id);
     } catch {
-      return new Set();
+      // fail open for this source only — design: blocks fail closed when known
     }
   }
 

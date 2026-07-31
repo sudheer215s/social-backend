@@ -109,4 +109,24 @@ export class GraphController {
   async unblock(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     await this.graph.unblock(req.userId!, userId);
   }
+
+  @Post('mutes/:userId')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  async mute(@Req() req: AuthedRequest, @Param('userId') userId: string) {
+    await this.graph.mute(req.userId!, userId);
+  }
+
+  @Delete('mutes/:userId')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  async unmute(@Req() req: AuthedRequest, @Param('userId') userId: string) {
+    await this.graph.unmute(req.userId!, userId);
+  }
+
+  /** Internal hydrate helper: muted author ids for viewer. */
+  @Get('mutes/:userId/ids/internal')
+  async mutedIdsInternal(@Param('userId') userId: string) {
+    return { ids: await this.graph.listMutedIds(userId) };
+  }
 }
