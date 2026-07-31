@@ -12,8 +12,11 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { HealthController } from './health.controller';
+import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
+import { SessionService } from './tokens/session.service';
 
 export const PG_POOL = Symbol('PG_POOL');
+export const JWT_KEYS = Symbol('JWT_KEYS');
 
 @Global()
 @Module({
@@ -34,6 +37,10 @@ export const PG_POOL = Symbol('PG_POOL');
       },
     },
     {
+      provide: JWT_KEYS,
+      useFactory: async (): Promise<JwtKeyRing> => createDevKeyRing(),
+    },
+    {
       provide: HealthService,
       inject: [PG_POOL],
       useFactory: (pool: Pool) =>
@@ -42,12 +49,24 @@ export const PG_POOL = Symbol('PG_POOL');
         }),
     },
     {
+      provide: SessionService,
+      inject: [PG_POOL, JWT_KEYS],
+      useFactory: (pool: Pool, keys: JwtKeyRing) =>
+        new SessionService(pool, keys),
+    },
+    {
       provide: AuthService,
-      inject: [PG_POOL],
-      useFactory: (pool: Pool) => new AuthService(pool),
+      inject: [PG_POOL, SessionService],
+      useFactory: (pool: Pool, sessions: SessionService) =>
+        new AuthService(pool, sessions),
+    },
+    {
+      provide: JwtKeyRing,
+      inject: [JWT_KEYS],
+      useFactory: (keys: JwtKeyRing) => keys,
     },
   ],
-  exports: [PG_POOL, AuthService],
+  exports: [PG_POOL, AuthService, JwtKeyRing, SessionService],
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}

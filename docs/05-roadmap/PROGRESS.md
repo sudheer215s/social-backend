@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-31  
 **Repo:** https://github.com/sudheer215s/social-backend  
 **Branch:** `main`  
-**HEAD:** `4ebc55b` — feat(P1-T01/T02): identity-service schema, register, and login
+**HEAD:** (set after commit)
 
 ## Workflow
 ```
@@ -14,39 +14,38 @@ task → test → code & build → test → review → commit → update this fi
 
 | Area | State |
 |------|--------|
-| **Phase** | **1 — Identity** (in progress) |
-| **Active next** | P1-T03 EdDSA/JWKS, P1-T04 refresh rotation |
-| **Frontend** | Deferred (docs under `docs/frontend/` untracked) |
-| **Compose** | Full local stack (Postgres/PgBouncer/Redis/Redpanda/ES/Jaeger/OTel) |
+| **Phase** | **1 — Identity** |
+| **Active next** | P1-T05 email verify/reset; P1-T06 api-gateway; Redis revocation set |
+| **Frontend** | Deferred |
 
-## Phase 0
-Core complete (P0-T04 eslint boundaries optional). Platform libs + hello + CI + Compose + Dockerfile + dev-setup.
+## Phase 1 completed
 
-## Phase 1 done this session
 | ID | What |
 |----|------|
-| P1-T01 | `identity` SQL schema + forward migrator |
-| P1-T02 | Register/login argon2id, anti-enumeration, integration tests |
+| P1-T01 | Schema + migrator |
+| P1-T02 | Register/login argon2id |
+| P1-T03 | EdDSA (Ed25519) access tokens + JWKS (`/.well-known/jwks.json`) |
+| P1-T04 | Refresh rotation + reuse detection (family revoke commits before 401) |
 
-### Identity service
-- App: `apps/identity-service` (Nest HTTP for now; gRPC later with gateway)
-- Routes: `POST /v1/auth/register`, `POST /v1/auth/login`, `/health/*`
-- Default port: **3001**
-- Migrations: `apps/identity-service/src/db/migrations/001_identity_init.sql`
-- Run: `DATABASE_URL=... SERVICE_NAME=identity-service ... pnpm --filter @social/identity-service dev`
+### Token surface
+- `POST /v1/auth/register` → `{ user, tokens }`
+- `POST /v1/auth/login` → `{ user, tokens }`
+- `POST /v1/auth/refresh` `{ refreshToken }`
+- `POST /v1/auth/logout` `{ refreshToken }`
+- `GET /.well-known/jwks.json` and `GET /v1/auth/jwks`
+- Access TTL 10m, refresh 30d; `sid` in access token
 
-### Tests
+### Important bugfix
+Reuse detection must **COMMIT family revoke before throwing 401**. Throwing inside `withTransaction` rolled back the revoke.
+
+## Resume
 ```bash
+pnpm compose:up
 pnpm --filter @social/identity-service test
 pnpm --filter @social/identity-service test:integration
+pnpm dev:identity
 ```
-
-## Next
-1. Access tokens (EdDSA) + JWKS
-2. Refresh rotation + reuse detection
-3. api-gateway shell
 
 ## Session log
 ### 2026-07-31
-- Backend-only focus; frontend deferred
-- Phase 1 identity schema + register/login landed
+- P1-T03/T04 tokens + refresh reuse detection

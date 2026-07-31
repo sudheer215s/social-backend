@@ -25,6 +25,7 @@
     "@social/platform-telemetry": "workspace:*",
     "argon2": "^0.41.1",
     "drizzle-orm": "^0.39.3",
+    "jose": "5",
     "pg": "^8.13.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -47,10 +48,16 @@
     "typescript": "^5.7.3"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "testPathIgnorePatterns": [".*\\.integration\\.spec\\.ts$"],
+    "testPathIgnorePatterns": [
+      ".*\\.integration\\.spec\\.ts$"
+    ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

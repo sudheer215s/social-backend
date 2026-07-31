@@ -60,8 +60,8 @@ Status: `todo` | `doing` | `done` | `blocked`
 | ---------- | --------------------------------------------- | --------------------------------------------------------- | ------ |
 | **P1-T01** | Identity schema + migrations                  | users, credentials, sessions, user_settings, email_tokens | `done` |
 | **P1-T02** | Register + login (argon2id, anti-enumeration) | Timing-safe failures                                      | `done` |
-| **P1-T03** | EdDSA access tokens + JWKS rotation           | Verify with rotated keys                                  | `todo` |
-| **P1-T04** | Refresh rotation + reuse detection            | Reuse revokes family                                      | `todo` |
+| **P1-T03** | EdDSA access tokens + JWKS rotation           | Verify with rotated keys                                  | `done` |
+| **P1-T04** | Refresh rotation + reuse detection            | Reuse revokes family                                      | `done` |
 | **P1-T05** | Email verify + password reset ports           | Provider behind internal interface                        | `todo` |
 | **P1-T06** | API gateway JWT + rate limit + RFC 9457       | Contract tests                                            | `todo` |
 | **P1-T07** | Profile CRUD + cache                          | Auth e2e journey                                          | `todo` |
@@ -84,6 +84,6 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ## Current focus
 
-**Active:** Phase 0 — P0-T04 (eslint boundaries), then Phase 0 exit polish / Phase 1 prep.
-**Completed:** P0-T01–T03, P0-T05–T16 (except P0-T04).
+**Active:** Phase 1 — email ports / api-gateway (P1-T05/T06).
+**Completed:** P1-T01–T04 (schema, login, EdDSA JWT, refresh reuse).
 

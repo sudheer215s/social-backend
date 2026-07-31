@@ -8,6 +8,7 @@ import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
 import { getDummyPasswordHash, hashPassword, verifyPassword } from './password';
 import type { LoginInput, RegisterInput } from './validation';
+import { SessionService, type TokenPair } from '../tokens/session.service';
 
 export interface PublicUser {
   id: string;
@@ -20,11 +21,19 @@ export interface PublicUser {
   createdAt: Date;
 }
 
+export interface AuthResult {
+  user: PublicUser;
+  tokens: TokenPair;
+}
+
 @Injectable()
 export class AuthService {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly sessions: SessionService,
+  ) {}
 
-  async register(input: RegisterInput): Promise<PublicUser> {
+  async register(input: RegisterInput): Promise<AuthResult> {
     const passwordHash = await hashPassword(input.password);
     const userId = uuidv7();
 
@@ -64,18 +73,22 @@ export class AuthService {
         if (!u) {
           throw new Error('user insert vanished');
         }
-        return mapUser(u);
+        const tokens = await this.sessions.issueSession(
+          userId,
+          undefined,
+          client,
+        );
+        return { user: mapUser(u), tokens };
       });
     } catch (err) {
       if (isUniqueViolation(err)) {
-        // Do not reveal which field collided (anti-enumeration).
         throw new ConflictException('username or email already registered');
       }
       throw err;
     }
   }
 
-  async login(input: LoginInput): Promise<PublicUser> {
+  async login(input: LoginInput): Promise<AuthResult> {
     const identifier = input.identifier.trim();
     const lookup = await this.pool.query<{
       id: string;
@@ -109,11 +122,19 @@ export class AuthService {
       row.status !== 'active' ||
       (row.locked_until && row.locked_until > new Date())
     ) {
-      // Uniform failure surface (anti-enumeration).
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return mapUser(row);
+    const tokens = await this.sessions.issueSession(row.id);
+    return { user: mapUser(row), tokens };
+  }
+
+  async refresh(refreshToken: string): Promise<TokenPair> {
+    return this.sessions.refresh(refreshToken);
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    await this.sessions.revokeByRefreshToken(refreshToken);
   }
 }
 
