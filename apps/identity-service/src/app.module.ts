@@ -6,6 +6,14 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { checkDatabase, createPool } from '@social/platform-db';
+import {
+  createRedisClient,
+  MemorySidRevocationStore,
+  NoopSidRevocationStore,
+  RedisSidRevocationStore,
+  type RedisClient,
+  type SidRevocationStore,
+} from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
 import type { Pool } from 'pg';
 import { AuthController } from './auth/auth.controller';
@@ -22,6 +30,8 @@ import { UsersService } from './users/users.service';
 
 export const PG_POOL = Symbol('PG_POOL');
 export const JWT_KEYS = Symbol('JWT_KEYS');
+export const REDIS = Symbol('REDIS');
+export const SID_REVOCATION = Symbol('SID_REVOCATION');
 
 @Global()
 @Module({
@@ -42,6 +52,34 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
       },
     },
     {
+      provide: REDIS,
+      useFactory: (): RedisClient | null => {
+        if (process.env.REDIS_DISABLED === '1') {
+          return null;
+        }
+        try {
+          return createRedisClient(
+            process.env.REDIS_URL ?? 'redis://127.0.0.1:6379',
+          );
+        } catch {
+          return null;
+        }
+      },
+    },
+    {
+      provide: SID_REVOCATION,
+      inject: [REDIS],
+      useFactory: (redis: RedisClient | null): SidRevocationStore => {
+        if (process.env.NODE_ENV === 'test' && !redis) {
+          return new MemorySidRevocationStore();
+        }
+        if (!redis) {
+          return new NoopSidRevocationStore();
+        }
+        return new RedisSidRevocationStore(redis);
+      },
+    },
+    {
       provide: JWT_KEYS,
       useFactory: async (): Promise<JwtKeyRing> => createDevKeyRing(),
     },
@@ -56,9 +94,12 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
     },
     {
       provide: SessionService,
-      inject: [PG_POOL, JWT_KEYS],
-      useFactory: (pool: Pool, keys: JwtKeyRing) =>
-        new SessionService(pool, keys),
+      inject: [PG_POOL, JWT_KEYS, SID_REVOCATION],
+      useFactory: (
+        pool: Pool,
+        keys: JwtKeyRing,
+        revocation: SidRevocationStore,
+      ) => new SessionService(pool, keys, revocation),
     },
     {
       provide: EmailTokenService,
@@ -97,7 +138,10 @@ export const JWT_KEYS = Symbol('JWT_KEYS');
   ],
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(REDIS) private readonly redis: RedisClient | null,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     if (process.env.IDENTITY_SKIP_MIGRATE === '1') {
@@ -108,5 +152,8 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     await this.pool.end();
+    if (this.redis) {
+      this.redis.disconnect();
+    }
   }
 }

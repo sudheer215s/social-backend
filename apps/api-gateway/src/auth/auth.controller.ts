@@ -12,6 +12,7 @@ import {
 import type { AuthedRequest } from './auth.guard';
 import { AuthGuard } from './auth.guard';
 import { IdentityProxy } from '../proxy/identity.proxy';
+import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
 
 @Controller()
 export class AuthController {
@@ -38,16 +39,19 @@ export class AuthController {
   }
 
   @Post('v1/auth/register')
+  @UseGuards(RateLimitGuard)
   register(@Body() body: unknown) {
     return this.forward('POST', '/v1/auth/register', { body });
   }
 
   @Post('v1/auth/login')
+  @UseGuards(RateLimitGuard)
   login(@Body() body: unknown) {
     return this.forward('POST', '/v1/auth/login', { body });
   }
 
   @Post('v1/auth/refresh')
+  @UseGuards(RateLimitGuard)
   refresh(@Body() body: unknown) {
     return this.forward('POST', '/v1/auth/refresh', { body });
   }
@@ -63,11 +67,13 @@ export class AuthController {
   }
 
   @Post('v1/auth/password/forgot')
+  @UseGuards(RateLimitGuard)
   forgotPassword(@Body() body: unknown) {
     return this.forward('POST', '/v1/auth/password/forgot', { body });
   }
 
   @Post('v1/auth/password/reset')
+  @UseGuards(RateLimitGuard)
   resetPassword(@Body() body: unknown) {
     return this.forward('POST', '/v1/auth/password/reset', { body });
   }
@@ -82,7 +88,6 @@ export class AuthController {
     return this.forward('GET', '/.well-known/jwks.json');
   }
 
-  /** Authenticated private profile (includes email). */
   @Get('v1/users/me')
   @UseGuards(AuthGuard)
   me(@Req() req: AuthedRequest) {
@@ -104,7 +109,6 @@ export class AuthController {
     });
   }
 
-  /** Public profile by username. */
   @Get('v1/users/by-username/:username')
   byUsername(@Param('username') username: string) {
     return this.forward(
@@ -113,7 +117,6 @@ export class AuthController {
     );
   }
 
-  /** Token claims only (compat with earlier gateway whoami). */
   @Get('v1/me')
   @UseGuards(AuthGuard)
   claims(@Req() req: AuthedRequest) {

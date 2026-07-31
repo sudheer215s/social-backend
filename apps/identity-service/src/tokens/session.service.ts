@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Pool, PoolClient } from 'pg';
+import type { SidRevocationStore } from '@social/platform-redis';
 import { withTransaction } from '@social/platform-db';
 import { uuidv7 } from 'uuidv7';
 import {
@@ -23,6 +24,7 @@ export class SessionService {
   constructor(
     private readonly pool: Pool,
     private readonly keys: JwtKeyRing,
+    private readonly revocation: SidRevocationStore,
   ) {}
 
   async issueSession(
@@ -74,10 +76,6 @@ export class SessionService {
     };
   }
 
-  /**
-   * Rotate refresh token. Reuse of a previous token revokes the whole family.
-   * Revocation on reuse is committed before the 401 is thrown.
-   */
   async refresh(refreshToken: string): Promise<TokenPair> {
     const presentedHash = hashRefreshToken(refreshToken);
     const client = await this.pool.connect();
@@ -113,12 +111,16 @@ export class SessionService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      // Reuse: presented hash is the previous token, not the current one.
       if (
         row.prev_token_hash &&
         buffersEqual(row.prev_token_hash, presentedHash) &&
         !buffersEqual(row.refresh_token_hash, presentedHash)
       ) {
+        const family = await client.query<{ id: string }>(
+          `SELECT id FROM identity.sessions
+           WHERE family_id = $1 AND revoked_at IS NULL`,
+          [row.family_id],
+        );
         await client.query(
           `UPDATE identity.sessions
            SET revoked_at = now()
@@ -126,6 +128,7 @@ export class SessionService {
           [row.family_id],
         );
         await client.query('COMMIT');
+        await this.revocation.revokeMany(family.rows.map((r) => r.id));
         throw new UnauthorizedException('Refresh token reuse detected');
       }
 
@@ -170,8 +173,6 @@ export class SessionService {
         sessionId: row.id,
       };
     } catch (err) {
-      // Only roll back if we are still in a transaction (non-reuse path errors
-      // after BEGIN). COMMIT already closed the reuse path.
       try {
         await client.query('ROLLBACK');
       } catch {
@@ -185,13 +186,15 @@ export class SessionService {
 
   async revokeByRefreshToken(refreshToken: string): Promise<void> {
     const h = hashRefreshToken(refreshToken);
-    await this.pool.query(
+    const found = await this.pool.query<{ id: string }>(
       `UPDATE identity.sessions
        SET revoked_at = now()
        WHERE (refresh_token_hash = $1 OR prev_token_hash = $1)
-         AND revoked_at IS NULL`,
+         AND revoked_at IS NULL
+       RETURNING id`,
       [h],
     );
+    await this.revocation.revokeMany(found.rows.map((r) => r.id));
   }
 
   async revokeSession(sessionId: string): Promise<void> {
@@ -200,17 +203,18 @@ export class SessionService {
        WHERE id = $1 AND revoked_at IS NULL`,
       [sessionId],
     );
+    await this.revocation.revoke(sessionId);
   }
 
   async revokeAllForUser(userId: string, client?: PoolClient): Promise<void> {
     const sql = `UPDATE identity.sessions
        SET revoked_at = now()
-       WHERE user_id = $1 AND revoked_at IS NULL`;
-    if (client) {
-      await client.query(sql, [userId]);
-    } else {
-      await this.pool.query(sql, [userId]);
-    }
+       WHERE user_id = $1 AND revoked_at IS NULL
+       RETURNING id`;
+    const result = client
+      ? await client.query<{ id: string }>(sql, [userId])
+      : await this.pool.query<{ id: string }>(sql, [userId]);
+    await this.revocation.revokeMany(result.rows.map((r) => r.id));
   }
 }
 

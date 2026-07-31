@@ -6,6 +6,7 @@ import { UsersService } from './users.service';
 import { AuthService } from '../auth/auth.service';
 import { EmailTokenService } from '../auth/email-token.service';
 import { ConsoleEmailAdapter } from '../email/console-email.adapter';
+import { MemorySidRevocationStore } from '@social/platform-redis';
 import { createDevKeyRing } from '../tokens/jwt-keys';
 import { SessionService } from '../tokens/session.service';
 
@@ -27,7 +28,7 @@ describe('UsersService (integration)', () => {
       const keys = await createDevKeyRing();
       auth = new AuthService(
         pool,
-        new SessionService(pool, keys),
+        new SessionService(pool, keys, new MemorySidRevocationStore()),
         new EmailTokenService(pool),
         new ConsoleEmailAdapter(),
       );

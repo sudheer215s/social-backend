@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import path from 'node:path';
 import { applyMigrations } from '../db/migrate';
+import { MemorySidRevocationStore } from '@social/platform-redis';
 import { createDevKeyRing } from '../tokens/jwt-keys';
 import { SessionService } from '../tokens/session.service';
 import { ConsoleEmailAdapter } from '../email/console-email.adapter';
@@ -35,7 +36,11 @@ describe('AuthService email + tokens (integration)', () => {
         issuer: 'http://test',
         audience: 'api',
       });
-      const sessions = new SessionService(pool, keys);
+      const sessions = new SessionService(
+        pool,
+        keys,
+        new MemorySidRevocationStore(),
+      );
       const emailTokens = new EmailTokenService(pool);
       mail = new ConsoleEmailAdapter();
       auth = new AuthService(pool, sessions, emailTokens, mail);

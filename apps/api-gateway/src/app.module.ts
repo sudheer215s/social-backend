@@ -1,10 +1,23 @@
 import { Module } from '@nestjs/common';
+import {
+  createRedisClient,
+  MemoryFixedWindowRateLimiter,
+  MemorySidRevocationStore,
+  NoopSidRevocationStore,
+  RedisFixedWindowRateLimiter,
+  RedisSidRevocationStore,
+  type RateLimiter,
+  type RedisClient,
+  type SidRevocationStore,
+} from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
 import { AuthController } from './auth/auth.controller';
 import { AuthGuard } from './auth/auth.guard';
 import { JwtVerifier } from './auth/jwt-verifier';
 import { HealthController } from './health.controller';
 import { IdentityProxy } from './proxy/identity.proxy';
+import { RateLimitGuard } from './rate-limit/rate-limit.guard';
+import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
 
 @Module({
   controllers: [AuthController, HealthController],
@@ -12,6 +25,43 @@ import { IdentityProxy } from './proxy/identity.proxy';
     {
       provide: HealthService,
       useFactory: () => new HealthService({ probes: [] }),
+    },
+    {
+      provide: REDIS,
+      useFactory: (): RedisClient | null => {
+        if (process.env.REDIS_DISABLED === '1') {
+          return null;
+        }
+        try {
+          return createRedisClient(
+            process.env.REDIS_URL ?? 'redis://127.0.0.1:6379',
+          );
+        } catch {
+          return null;
+        }
+      },
+    },
+    {
+      provide: SID_REVOCATION,
+      inject: [REDIS],
+      useFactory: (redis: RedisClient | null): SidRevocationStore => {
+        if (!redis) {
+          return process.env.NODE_ENV === 'test'
+            ? new MemorySidRevocationStore()
+            : new NoopSidRevocationStore();
+        }
+        return new RedisSidRevocationStore(redis);
+      },
+    },
+    {
+      provide: RATE_LIMITER,
+      inject: [REDIS],
+      useFactory: (redis: RedisClient | null): RateLimiter => {
+        if (!redis) {
+          return new MemoryFixedWindowRateLimiter();
+        }
+        return new RedisFixedWindowRateLimiter(redis, 'gw-rl:');
+      },
     },
     {
       provide: JwtVerifier,
@@ -31,7 +81,13 @@ import { IdentityProxy } from './proxy/identity.proxy';
           process.env.IDENTITY_BASE_URL ?? 'http://127.0.0.1:3001',
         ),
     },
-    AuthGuard,
+    {
+      provide: AuthGuard,
+      inject: [JwtVerifier, SID_REVOCATION],
+      useFactory: (verifier: JwtVerifier, revocation: SidRevocationStore) =>
+        new AuthGuard(verifier, revocation),
+    },
+    RateLimitGuard,
   ],
 })
 export class AppModule {}

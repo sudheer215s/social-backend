@@ -21,7 +21,7 @@
     "compose:down": "docker compose -f docker/docker-compose.yml down",
     "compose:ps": "docker compose -f docker/docker-compose.yml ps",
     "compose:check": "bash scripts/check-compose.sh",
-    "test:integration": "pnpm --filter @social/platform-db test:integration && pnpm --filter @social/identity-service test:integration",
+    "test:integration": "pnpm --filter @social/platform-db test:integration && pnpm --filter @social/platform-redis test:integration && pnpm --filter @social/identity-service test:integration",
     "docker:build:hello": "docker build -f docker/Dockerfile.hello-service -t social-hello:local .",
     "dev:setup": "bash scripts/dev-setup.sh",
     "dev:identity": "turbo run dev --filter=@social/identity-service",
