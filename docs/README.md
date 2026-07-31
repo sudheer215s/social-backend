@@ -21,8 +21,6 @@ Design documentation for the social backend. Written as a review-then-redesign p
 
 [`05-roadmap/implementation-roadmap.md`](./05-roadmap/implementation-roadmap.md)
 
-**Active implementation memory:** [`05-roadmap/PROGRESS.md`](./05-roadmap/PROGRESS.md) · [`05-roadmap/WORKFLOW.md`](./05-roadmap/WORKFLOW.md) · [`05-roadmap/task-board.md`](./05-roadmap/task-board.md)
-
 ---
 
 ## Contents

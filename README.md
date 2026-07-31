@@ -63,7 +63,7 @@ Full design: [`docs/01-architecture/system-design.md`](docs/01-architecture/syst
 ## Documentation
 
 Start here: **[`docs/README.md`](docs/README.md)**  
-Implementation loop: **[`docs/05-roadmap/WORKFLOW.md`](docs/05-roadmap/WORKFLOW.md)** · Progress: **[`docs/05-roadmap/PROGRESS.md`](docs/05-roadmap/PROGRESS.md)**
+Implementation roadmap: **[`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap/implementation-roadmap.md)**
 
 | Path                                                                                     | Contents                                               |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------ |
