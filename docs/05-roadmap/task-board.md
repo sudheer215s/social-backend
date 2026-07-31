@@ -58,8 +58,8 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 | ID         | Task                                          | Verifiable output                                         | Status |
 | ---------- | --------------------------------------------- | --------------------------------------------------------- | ------ |
-| **P1-T01** | Identity schema + migrations                  | users, credentials, sessions, user_settings, email_tokens | `todo` |
-| **P1-T02** | Register + login (argon2id, anti-enumeration) | Timing-safe failures                                      | `todo` |
+| **P1-T01** | Identity schema + migrations                  | users, credentials, sessions, user_settings, email_tokens | `done` |
+| **P1-T02** | Register + login (argon2id, anti-enumeration) | Timing-safe failures                                      | `done` |
 | **P1-T03** | EdDSA access tokens + JWKS rotation           | Verify with rotated keys                                  | `todo` |
 | **P1-T04** | Refresh rotation + reuse detection            | Reuse revokes family                                      | `todo` |
 | **P1-T05** | Email verify + password reset ports           | Provider behind internal interface                        | `todo` |

@@ -17,6 +17,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/hello-service/tsconfig.build.json"
       }
+    },
+    "identity-service": {
+      "type": "application",
+      "root": "apps/identity-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/identity-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/identity-service/tsconfig.build.json"
+      }
     }
   }
 }

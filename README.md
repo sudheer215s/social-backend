@@ -127,6 +127,7 @@ nvm use
 ```bash
 bash scripts/dev-setup.sh   # or: pnpm dev:setup
 pnpm dev                    # hello-service (watch)
+pnpm dev:identity           # identity-service on :3001
 ```
 
 **Manual:**
@@ -161,7 +162,8 @@ pnpm --filter @social/platform-db test:integration  # needs compose:up
 ```
 social-backend/
 ├── apps/
-│   └── hello-service/             # Phase 0 smoke service (Nest)
+│   ├── hello-service/             # Phase 0 smoke service (Nest)
+│   └── identity-service/          # Phase 1 auth (register/login)
 ├── libs/
 │   ├── platform-config/           # fail-fast Zod config
 │   ├── platform-telemetry/        # Pino logger, redaction, health probes

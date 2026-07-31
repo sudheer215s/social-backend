@@ -3,10 +3,9 @@
 **Last updated:** 2026-07-31  
 **Repo:** https://github.com/sudheer215s/social-backend  
 **Branch:** `main`  
-**HEAD:** `7c2521c` — feat(P0-T14/T16): extend Compose stack and clean-clone setup
+**HEAD:** (set after commit)
 
 ## Workflow
-
 ```
 task → test → code & build → test → review → commit → update this file
 ```
@@ -15,38 +14,39 @@ task → test → code & build → test → review → commit → update this fi
 
 | Area | State |
 |------|--------|
-| **Phase** | 0 — nearly complete |
-| **Active next** | P0-T04 (ESLint boundaries + husky); Phase 1 prep |
-| **Compose** | Postgres, PgBouncer, Redis, **Redpanda**, **Elasticsearch**, **Jaeger**, **OTel Collector** |
-| **Dev path** | `pnpm dev:setup` / `scripts/dev-setup.sh` |
+| **Phase** | **1 — Identity** (in progress) |
+| **Active next** | P1-T03 EdDSA/JWKS, P1-T04 refresh rotation |
+| **Frontend** | Deferred (docs under `docs/frontend/` untracked) |
+| **Compose** | Full local stack (Postgres/PgBouncer/Redis/Redpanda/ES/Jaeger/OTel) |
 
-## Completed (Phase 0)
+## Phase 0
+Core complete (P0-T04 eslint boundaries optional). Platform libs + hello + CI + Compose + Dockerfile + dev-setup.
 
-P0-T01–T03, P0-T05–T16 **except P0-T04** (optional polish).
+## Phase 1 done this session
+| ID | What |
+|----|------|
+| P1-T01 | `identity` SQL schema + forward migrator |
+| P1-T02 | Register/login argon2id, anti-enumeration, integration tests |
 
-### P0-T14 notes
-- Redpanda Kafka API: host `localhost:19092`, docker network `redpanda:9092`
-- ES single-node security off for local; green cluster health
-- OTel Collector OTLP HTTP `:4318` → Jaeger UI `:16686`
-- Host port `4317` is Jaeger OTLP; collector gRPC published as host `4319`
+### Identity service
+- App: `apps/identity-service` (Nest HTTP for now; gRPC later with gateway)
+- Routes: `POST /v1/auth/register`, `POST /v1/auth/login`, `/health/*`
+- Default port: **3001**
+- Migrations: `apps/identity-service/src/db/migrations/001_identity_init.sql`
+- Run: `DATABASE_URL=... SERVICE_NAME=identity-service ... pnpm --filter @social/identity-service dev`
 
-### P0-T16 notes
-- `scripts/dev-setup.sh` + `pnpm dev:setup`
-- `.env.example` updated for Redpanda host port and OTLP
-
-## Technical decisions
-1. PgBouncer: SET LOCAL timeouts only.
-2. Docker images: `pnpm deploy` for hello-service.
-3. Local Kafka = Redpanda (Kafka API compatible).
-4. Local observability = OTel Collector + Jaeger (full Grafana/Loki/Tempo can wait).
-
-## Resume
+### Tests
 ```bash
-pnpm dev:setup
-pnpm dev
+pnpm --filter @social/identity-service test
+pnpm --filter @social/identity-service test:integration
 ```
 
+## Next
+1. Access tokens (EdDSA) + JWKS
+2. Refresh rotation + reuse detection
+3. api-gateway shell
+
 ## Session log
-### 2026-07-31 (continued)
-- P0-T14 extended Compose + check-compose probes green
-- P0-T16 clean-clone setup script
+### 2026-07-31
+- Backend-only focus; frontend deferred
+- Phase 1 identity schema + register/login landed
