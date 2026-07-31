@@ -4,16 +4,22 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
-import { createConsumer, createKafka } from '@social/platform-events';
-import type { DomainEventEnvelope } from '@social/platform-events';
+import {
+  createConsumer,
+  createKafka,
+  createProducer,
+  startReliableConsumer,
+} from '@social/platform-events';
 import { HealthService } from '@social/platform-telemetry';
-import type { Consumer } from 'kafkajs';
+import type { Consumer, Producer } from 'kafkajs';
 import { HealthController } from './health.controller';
 import { EsClient } from './search/es.client';
 import { SearchController } from './search/search.controller';
 import { SearchService } from './search/search.service';
 
 export const ES_CLIENT = Symbol('ES_CLIENT');
+
+const CONSUMER_GROUP = 'search-indexer';
 
 @Module({
   controllers: [SearchController, HealthController],
@@ -45,6 +51,8 @@ export const ES_CLIENT = Symbol('ES_CLIENT');
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
   private consumer: Consumer | undefined;
+  private producer: Producer | undefined;
+  private stopConsumer: (() => Promise<void>) | undefined;
 
   constructor(@Inject(SearchService) private readonly search: SearchService) {}
 
@@ -59,25 +67,29 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
     if (process.env.KAFKA_DISABLED === '1') return;
     try {
       const kafka = createKafka('search-service');
-      this.consumer = await createConsumer(kafka, 'search-indexer');
-      for (const topic of ['social.post.v1', 'social.user.v1']) {
-        await this.consumer.subscribe({ topic, fromBeginning: false });
-      }
-      await this.consumer.run({
-        eachMessage: async ({ message }) => {
-          if (!message.value) return;
-          try {
-            const envelope = JSON.parse(
-              message.value.toString('utf8'),
-            ) as DomainEventEnvelope;
-            await this.search.processDomainEvent({
-              eventType: envelope.eventType,
-              payload: envelope.payload,
-            });
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.error('[search-indexer]', err);
-          }
+      this.producer = await createProducer(kafka);
+      this.consumer = await createConsumer(kafka, CONSUMER_GROUP);
+      this.stopConsumer = await startReliableConsumer({
+        consumer: this.consumer,
+        producer: this.producer,
+        topics: ['social.post.v1', 'social.user.v1'],
+        consumerGroup: CONSUMER_GROUP,
+        handler: async (envelope) => {
+          await this.search.processDomainEvent({
+            eventType: envelope.eventType,
+            payload: envelope.payload,
+          });
+        },
+        onDlq: (info) => {
+          // eslint-disable-next-line no-console
+          console.error(
+            `[search-dlq] ${info.errorClass}: ${info.errorMessage}`,
+            info.envelope.eventId,
+          );
+        },
+        onError: (err) => {
+          // eslint-disable-next-line no-console
+          console.error('[search-indexer]', err);
         },
       });
     } catch (err) {
@@ -87,6 +99,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.consumer) await this.consumer.disconnect();
+    if (this.stopConsumer) await this.stopConsumer();
+    if (this.producer) await this.producer.disconnect();
   }
 }

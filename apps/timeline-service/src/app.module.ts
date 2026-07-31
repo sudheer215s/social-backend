@@ -3,10 +3,14 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
-import { createConsumer, createKafka } from '@social/platform-events';
+import {
+  createConsumer,
+  createKafka,
+  createProducer,
+} from '@social/platform-events';
 import { createRedisClient, type RedisClient } from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
-import type { Consumer } from 'kafkajs';
+import type { Consumer, Producer } from 'kafkajs';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { startFanoutConsumer } from './fanout/fanout.consumer';
 import { HealthController } from './health.controller';
@@ -49,19 +53,19 @@ export const TIMELINE_STORE = Symbol('TIMELINE_STORE');
 })
 export class AppModule implements OnModuleInit, OnModuleDestroy {
   private consumer: Consumer | undefined;
+  private producer: Producer | undefined;
   private stopConsumer: (() => Promise<void>) | undefined;
   private redis: RedisClient | undefined;
 
   async onModuleInit(): Promise<void> {
-    // Redis is created via DI factory; grab for shutdown via new client is ok
     this.redis = createRedisClient(
       process.env.REDIS_URL ?? 'redis://127.0.0.1:6379',
     );
     if (process.env.KAFKA_DISABLED === '1') return;
     try {
       const kafka = createKafka('timeline-service');
+      this.producer = await createProducer(kafka);
       this.consumer = await createConsumer(kafka, 'timeline-fanout');
-      // Build service for consumer (same config as DI)
       const store = new TimelineStore(this.redis);
       const timelines = new TimelineService(
         store,
@@ -70,9 +74,16 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
       );
       this.stopConsumer = await startFanoutConsumer({
         consumer: this.consumer,
+        producer: this.producer,
         timelines,
         onError: (err) => {
           console.error('[timeline-fanout]', err);
+        },
+        onDlq: (info) => {
+          console.error(
+            `[timeline-dlq] ${info.errorClass}: ${info.errorMessage}`,
+            info.envelope.eventId,
+          );
         },
       });
     } catch (err) {
@@ -82,6 +93,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     if (this.stopConsumer) await this.stopConsumer();
+    if (this.producer) await this.producer.disconnect();
     this.redis?.disconnect();
   }
 }

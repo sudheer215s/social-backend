@@ -7,9 +7,17 @@ CREATE TABLE IF NOT EXISTS identity.outbox (
   topic           text NOT NULL,
   payload         jsonb NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),
-  published_at    timestamptz
+  published_at    timestamptz,
+  attempts        int NOT NULL DEFAULT 0,
+  locked_until    timestamptz,
+  last_error      text,
+  poisoned_at     timestamptz
 );
 
 CREATE INDEX IF NOT EXISTS ix_identity_outbox_unpublished
   ON identity.outbox (created_at)
-  WHERE published_at IS NULL;
+  WHERE published_at IS NULL AND poisoned_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS ix_identity_outbox_claimable
+  ON identity.outbox (id)
+  WHERE published_at IS NULL AND poisoned_at IS NULL;

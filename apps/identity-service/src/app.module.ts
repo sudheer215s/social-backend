@@ -178,6 +178,13 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
           // eslint-disable-next-line no-console
           console.error('[identity-outbox-relay]', err);
         },
+        onPoison: (event, error) => {
+          // eslint-disable-next-line no-console
+          console.error(
+            `[identity-outbox-poison] id=${event.id} type=${event.eventType}`,
+            error,
+          );
+        },
       }).stop;
     } catch (err) {
       // eslint-disable-next-line no-console

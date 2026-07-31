@@ -73,6 +73,12 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
         onError: (err) => {
           console.error('[graph-outbox-relay]', err);
         },
+        onPoison: (event, error) => {
+          console.error(
+            `[graph-outbox-poison] id=${event.id} type=${event.eventType}`,
+            error,
+          );
+        },
       }).stop;
     } catch (err) {
       console.warn('[graph-service] Kafka relay not started', err);

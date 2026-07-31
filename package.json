@@ -30,7 +30,9 @@
     "dev:graph": "turbo run dev --filter=@social/graph-service",
     "dev:timeline": "turbo run dev --filter=@social/timeline-service",
     "dev:notification": "turbo run dev --filter=@social/notification-service",
-    "dev:search": "turbo run dev --filter=@social/search-service"
+    "dev:search": "turbo run dev --filter=@social/search-service",
+    "dlq:list": "node scripts/dlq-inspect.mjs list",
+    "dlq:redrive": "node scripts/dlq-inspect.mjs redrive"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
