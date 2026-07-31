@@ -37,9 +37,9 @@ Status: `todo` | `doing` | `done` | `blocked`
 | ---------- | -------------------------------------------------- | ------------------------------------------------------- | ----------------------- | ------ |
 | **P0-T12** | `hello-service` uses config + telemetry + health   | App boots only with valid env; live/ready + hello route | e2e: health endpoints   | `done` |
 | **P0-T13** | Docker Compose core (Postgres + PgBouncer + Redis) | `docker compose up` healthy                             | Compose healthchecks    | `done` |
-| **P0-T14** | Compose extended (Redpanda + ES + OTel)            | Full local stack starts                                 | Healthchecks green      | `todo` |
+| **P0-T14** | Compose extended (Redpanda + ES + OTel)            | Full local stack starts                                 | Healthchecks green      | `done` |
 | **P0-T15** | Multi-stage Dockerfile for apps                    | Image builds for `hello-service`                        | `docker build` succeeds | `done` |
-| **P0-T16** | `pnpm dev` clean-clone path                        | Documented & scripted                                   | Checklist in README     | `todo` |
+| **P0-T16** | `pnpm dev` clean-clone path                        | Documented & scripted                                   | Checklist in README     | `done` |
 
 ### Phase 0 exit criteria (from roadmap)
 
@@ -49,7 +49,7 @@ Status: `todo` | `doing` | `done` | `blocked`
 | Trace crosses process boundary           | P0-T07–T08, T12, OTel         | todo                   |
 | Metrics + one alert                      | later observability           | todo                   |
 | Preview env PR lifecycle                 | CD / Argo                     | todo                   |
-| `pnpm dev` &lt; 10 min                   | P0-T16                        | todo                   |
+| `pnpm dev` &lt; 10 min                   | P0-T16                        | done                   |
 | Canary abort                             | CD / Argo Rollouts            | deferred until cluster |
 
 ---
@@ -84,6 +84,6 @@ Status: `todo` | `doing` | `done` | `blocked`
 
 ## Current focus
 
-**Active:** Phase 0 — P0-T14 (Redpanda/ES/OTel), P0-T16 (clean-clone path), P0-T04 (eslint boundaries).
-**Completed:** P0-T01–T03, P0-T05–T13, P0-T15 (+ workflow memory).
+**Active:** Phase 0 — P0-T04 (eslint boundaries), then Phase 0 exit polish / Phase 1 prep.
+**Completed:** P0-T01–T03, P0-T05–T16 (except P0-T04).
 

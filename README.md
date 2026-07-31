@@ -101,7 +101,7 @@ Details and gates: [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap
 | ------------------------- | -------------------------------------------------------------- |
 | Architecture (v2)         | Documented and review-approved                                 |
 | Application code          | Monorepo: hello-service + platform-config/telemetry/db/grpc    |
-| Local multi-service stack | Compose core up (Postgres + PgBouncer + Redis)                 |
+| Local multi-service stack | Compose: Postgres, PgBouncer, Redis, Redpanda, ES, Jaeger, OTel |
 | Production deploy         | Not yet                                                        |
 
 This is a deliberate **design-first** repo: the hard distributed-systems choices (timeline algorithm, capacity model, consistency, authz) are specified before service code lands.
@@ -122,13 +122,23 @@ nvm use
 
 ## Quick start
 
+**Clean clone (P0-T16):** one script installs deps, starts Compose, builds, and tests.
+
+```bash
+bash scripts/dev-setup.sh   # or: pnpm dev:setup
+pnpm dev                    # hello-service (watch)
+```
+
+**Manual:**
+
 ```bash
 pnpm install
-cp .env.example .env   # required for hello-service boot (validated config)
-pnpm compose:up        # Postgres :5432, PgBouncer :6432, Redis :6379
-pnpm docker:build:hello  # multi-stage distroless image for hello-service
-pnpm dev               # hello-service (watch)
+cp .env.example .env
+pnpm compose:up             # Postgres, PgBouncer, Redis, Redpanda, ES, Jaeger, OTel
+pnpm docker:build:hello     # optional image
+pnpm dev
 # GET /  GET /health/live  GET /health/ready
+# Jaeger UI: http://127.0.0.1:16686  ·  ES: http://127.0.0.1:9200
 ```
 
 Other scripts (Turbo, all packages):

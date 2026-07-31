@@ -1,11 +1,12 @@
-# Local infrastructure — Phase 0 core (P0-T13).
-# Production-shaped: Postgres behind PgBouncer, Redis with persistence.
-# Extended stack (Redpanda, ES, OTel) lands in P0-T14.
+# Local infrastructure — Phase 0 (P0-T13 core + P0-T14 extended).
+# Production-shaped: Postgres behind PgBouncer, Redis, Redpanda (Kafka API),
+# Elasticsearch, OpenTelemetry Collector + Jaeger.
 #
 # Usage (from repo root):
-#   docker compose -f docker/docker-compose.yml up -d
-#   docker compose -f docker/docker-compose.yml ps
-#   docker compose -f docker/docker-compose.yml down
+#   pnpm compose:up
+#   pnpm compose:ps
+#   pnpm compose:down
+#   pnpm compose:check
 
 name: social-backend
 
@@ -32,7 +33,6 @@ services:
       - social-net
 
   pgbouncer:
-    # edoburu tags are sparse on Docker Hub; pin latest and re-pin by digest in Phase 0 hardening.
     image: edoburu/pgbouncer:latest
     container_name: social-pgbouncer
     environment:
@@ -52,8 +52,6 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      # Image is Alpine-based without pg_isready; TCP check via busybox/nc if present,
-      # otherwise process presence is enough for local smoke.
       test: ['CMD-SHELL', 'pidof pgbouncer']
       interval: 5s
       timeout: 5s
@@ -86,9 +84,120 @@ services:
     networks:
       - social-net
 
+  # Kafka-compatible broker (local stand-in for Apache Kafka)
+  redpanda:
+    image: redpandadata/redpanda:v24.2.4
+    container_name: social-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - '1'
+      - --memory
+      - 512M
+      - --reserve-memory
+      - 0M
+      - --node-id
+      - '0'
+      - --check=false
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://127.0.0.1:19092
+      - --rpc-addr
+      - 0.0.0.0:33145
+      - --advertise-rpc-addr
+      - redpanda:33145
+      - --mode
+      - dev-container
+      - --default-log-level=warn
+    ports:
+      # Host clients use 19092; containers use redpanda:9092
+      - '19092:19092'
+      - '9092:9092'
+    healthcheck:
+      test:
+        ['CMD-SHELL', "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    networks:
+      - social-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: social-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: 'false'
+      xpack.security.http.ssl.enabled: 'false'
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      cluster.name: social-local
+    ports:
+      - '9200:9200'
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'curl -fsS http://127.0.0.1:9200/_cluster/health | grep -E ''"status":"(green|yellow)"'' || exit 1',
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+    networks:
+      - social-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: social-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      # UI
+      - '16686:16686'
+      # OTLP gRPC (collector forwards here)
+      - '4317:4317'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:16686/ || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - social-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: social-otel-collector
+    command: ['--config=/etc/otelcol/config.yaml']
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      # App OTLP HTTP (matches OTEL_EXPORTER_OTLP_ENDPOINT default :4318)
+      - '4318:4318'
+      # Keep host 4317 free for Jaeger; apps inside network can use collector:4317
+      - '4319:4317'
+    depends_on:
+      jaeger:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:13133/ || exit 0']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    networks:
+      - social-net
+
 volumes:
   postgres_data:
   redis_data:
+  elasticsearch_data:
 
 networks:
   social-net:
