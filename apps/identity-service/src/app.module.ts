@@ -28,6 +28,10 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { EmailTokenService } from './auth/email-token.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import {
+  CounterReconcileService,
+  startCounterReconcile,
+} from './counters/counter-reconcile.service';
 import { CounterService } from './counters/counter.service';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { ConsoleEmailAdapter } from './email/console-email.adapter';
@@ -149,6 +153,11 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
       useFactory: (pool: Pool) => new ErasureWorker(pool),
     },
     {
+      provide: CounterReconcileService,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new CounterReconcileService(pool),
+    },
+    {
       provide: JwtKeyRing,
       inject: [JWT_KEYS],
       useFactory: (keys: JwtKeyRing) => keys,
@@ -170,12 +179,15 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   private stopRelay: (() => void) | undefined;
   private stopCounter: (() => Promise<void>) | undefined;
   private stopErasure: (() => void) | undefined;
+  private stopReconcile: (() => void) | undefined;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(REDIS) private readonly redis: RedisClient | null,
     @Inject(CounterService) private readonly counters: CounterService,
     @Inject(ErasureWorker) private readonly erasure: ErasureWorker,
+    @Inject(CounterReconcileService)
+    private readonly reconcile: CounterReconcileService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -190,6 +202,19 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
         onError: (err) => {
           // eslint-disable-next-line no-console
           console.error('[erasure-worker]', err);
+        },
+      }).stop;
+    }
+
+    if (process.env.COUNTER_RECONCILE_DISABLED !== '1') {
+      this.stopReconcile = startCounterReconcile({
+        service: this.reconcile,
+        intervalMs: Number(
+          process.env.COUNTER_RECONCILE_INTERVAL_MS ?? 5 * 60_000,
+        ),
+        onError: (err) => {
+          // eslint-disable-next-line no-console
+          console.error('[counter-reconcile]', err);
         },
       }).stop;
     }
@@ -250,6 +275,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.stopReconcile?.();
     this.stopErasure?.();
     this.stopRelay?.();
     if (this.stopCounter) await this.stopCounter();

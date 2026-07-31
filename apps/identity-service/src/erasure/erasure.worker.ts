@@ -69,6 +69,9 @@ export class ErasureWorker {
              bio = NULL,
              avatar_media_id = NULL,
              email_verified = false,
+             follower_count = 0,
+             following_count = 0,
+             post_count = 0,
              updated_at = now()
          WHERE id = $1::uuid`,
         [userId, tombEmail, tombUser],
