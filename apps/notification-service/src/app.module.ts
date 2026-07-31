@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { checkDatabase, createPool } from '@social/platform-db';
 import {
+  checkKafka,
   createConsumer,
   createKafka,
   createProducer,
@@ -71,6 +72,7 @@ const CONSUMER_GROUP = 'notification-processor';
                 }
               },
             },
+            { name: 'kafka', check: () => checkKafka('notification-health') },
           ],
         }),
     },

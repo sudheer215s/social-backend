@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { checkDatabase, createPool } from '@social/platform-db';
 import {
+  checkKafka,
   createConsumer,
   createKafka,
   createProducer,
@@ -43,7 +44,10 @@ export const PG_POOL = Symbol('PG_POOL');
       inject: [PG_POOL],
       useFactory: (pool: Pool) =>
         new HealthService({
-          probes: [{ name: 'postgres', check: () => checkDatabase(pool) }],
+          probes: [
+            { name: 'postgres', check: () => checkDatabase(pool) },
+            { name: 'kafka', check: () => checkKafka('post-health') },
+          ],
         }),
     },
     {

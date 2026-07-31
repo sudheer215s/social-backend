@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { checkDatabase, createPool } from '@social/platform-db';
 import {
+  checkKafka,
   createConsumer,
   createKafka,
   createProducer,
@@ -121,6 +122,11 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
                   return false;
                 }
               },
+            },
+            // Soft probe: kafka down → degraded (HTTP still serves; outbox absorbs)
+            {
+              name: 'kafka',
+              check: () => checkKafka('identity-health'),
             },
           ],
         }),

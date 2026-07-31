@@ -1,0 +1,385 @@
+# Minimal Deployments + Services for Nest apps.
+# Images: build/push with your registry, e.g. ghcr.io/org/social-identity:tag
+# Apply: kubectl apply -f deploy/k8s/
+#
+# Probes use /health/live (liveness) and /health/ready (readiness → 503 when unavailable).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service
+  namespace: social
+  labels: { app: identity-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: identity-service }
+  template:
+    metadata:
+      labels: { app: identity-service }
+    spec:
+      containers:
+        - name: app
+          image: social-identity:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3001 }
+            - { name: grpc, containerPort: 50051 }
+          env:
+            - { name: SERVICE_NAME, value: identity-service }
+            - { name: PORT, value: '3001' }
+            - { name: IDENTITY_GRPC_URL, value: '0.0.0.0:50051' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: social
+spec:
+  selector: { app: identity-service }
+  ports:
+    - { name: http, port: 3001, targetPort: http }
+    - { name: grpc, port: 50051, targetPort: grpc }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-service
+  namespace: social
+  labels: { app: post-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: post-service }
+  template:
+    metadata:
+      labels: { app: post-service }
+    spec:
+      containers:
+        - name: app
+          image: social-post:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3002 }
+          env:
+            - { name: SERVICE_NAME, value: post-service }
+            - { name: PORT, value: '3002' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: post-service
+  namespace: social
+spec:
+  selector: { app: post-service }
+  ports:
+    - { name: http, port: 3002, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graph-service
+  namespace: social
+  labels: { app: graph-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: graph-service }
+  template:
+    metadata:
+      labels: { app: graph-service }
+    spec:
+      containers:
+        - name: app
+          image: social-graph:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3003 }
+          env:
+            - { name: SERVICE_NAME, value: graph-service }
+            - { name: PORT, value: '3003' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: graph-service
+  namespace: social
+spec:
+  selector: { app: graph-service }
+  ports:
+    - { name: http, port: 3003, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timeline-service
+  namespace: social
+  labels: { app: timeline-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: timeline-service }
+  template:
+    metadata:
+      labels: { app: timeline-service }
+    spec:
+      containers:
+        - name: app
+          image: social-timeline:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3004 }
+          env:
+            - { name: SERVICE_NAME, value: timeline-service }
+            - { name: PORT, value: '3004' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timeline-service
+  namespace: social
+spec:
+  selector: { app: timeline-service }
+  ports:
+    - { name: http, port: 3004, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: social
+  labels: { app: notification-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: notification-service }
+  template:
+    metadata:
+      labels: { app: notification-service }
+    spec:
+      containers:
+        - name: app
+          image: social-notification:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3005 }
+          env:
+            - { name: SERVICE_NAME, value: notification-service }
+            - { name: PORT, value: '3005' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: social
+spec:
+  selector: { app: notification-service }
+  ports:
+    - { name: http, port: 3005, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-service
+  namespace: social
+  labels: { app: search-service }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: search-service }
+  template:
+    metadata:
+      labels: { app: search-service }
+    spec:
+      containers:
+        - name: app
+          image: social-search:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3006 }
+          env:
+            - { name: SERVICE_NAME, value: search-service }
+            - { name: PORT, value: '3006' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-service
+  namespace: social
+spec:
+  selector: { app: search-service }
+  ports:
+    - { name: http, port: 3006, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime-gateway
+  namespace: social
+  labels: { app: realtime-gateway }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: realtime-gateway }
+  template:
+    metadata:
+      labels: { app: realtime-gateway }
+    spec:
+      containers:
+        - name: app
+          image: social-realtime:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3007 }
+          env:
+            - { name: SERVICE_NAME, value: realtime-gateway }
+            - { name: PORT, value: '3007' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 768Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: realtime-gateway
+  namespace: social
+spec:
+  selector: { app: realtime-gateway }
+  ports:
+    - { name: http, port: 3007, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: social
+  labels: { app: api-gateway }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: api-gateway }
+  template:
+    metadata:
+      labels: { app: api-gateway }
+    spec:
+      containers:
+        - name: app
+          image: social-gateway:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 3000 }
+          env:
+            - { name: SERVICE_NAME, value: api-gateway }
+            - { name: PORT, value: '3000' }
+          envFrom:
+            - configMapRef: { name: social-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: '1', memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: social
+spec:
+  type: ClusterIP
+  selector: { app: api-gateway }
+  ports:
+    - { name: http, port: 3000, targetPort: http }

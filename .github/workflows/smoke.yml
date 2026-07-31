@@ -1,0 +1,73 @@
+# Full stack smoke: infra + app images + gateway e2e.
+# Manual or nightly — too heavy for every PR.
+name: Stack smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 06:00 UTC daily
+    - cron: '0 6 * * *'
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stack-smoke:
+    name: compose stack · smoke-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start full stack
+        run: |
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.apps.yml \
+            up -d --build
+
+      - name: Wait for API gateway ready
+        run: |
+          set -e
+          for i in $(seq 1 120); do
+            code=$(curl -s -o /tmp/ready.json -w '%{http_code}' http://127.0.0.1:3000/health/ready || true)
+            if [ "$code" = "200" ]; then
+              echo "gateway ready"
+              cat /tmp/ready.json || true
+              exit 0
+            fi
+            echo "waiting for gateway… http=$code ($i)"
+            sleep 5
+          done
+          echo "gateway not ready"
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.apps.yml ps
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.apps.yml logs --tail=100 api-gateway identity-service || true
+          exit 1
+
+      - name: Smoke e2e
+        env:
+          GATEWAY_URL: http://127.0.0.1:3000
+        run: pnpm smoke:e2e
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.apps.yml down -v
