@@ -3,7 +3,7 @@
 **Last updated:** 2026-07-31  
 **Repo:** https://github.com/sudheer215s/social-backend  
 **Branch:** `main`  
-**HEAD:** (set after commit)
+**HEAD:** `4ebc55b` — feat(P1-T01/T02): identity-service schema, register, and login
 
 ## Workflow
 ```
