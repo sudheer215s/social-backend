@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   HttpException,
   Param,
   Patch,
@@ -11,12 +13,16 @@ import {
 } from '@nestjs/common';
 import type { AuthedRequest } from './auth.guard';
 import { AuthGuard } from './auth.guard';
+import { IdentityGrpcClient } from '../proxy/identity.grpc.client';
 import { IdentityProxy } from '../proxy/identity.proxy';
 import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly identity: IdentityProxy) {}
+  constructor(
+    private readonly identity: IdentityProxy,
+    private readonly identityGrpc: IdentityGrpcClient,
+  ) {}
 
   private async forward(
     method: string,
@@ -90,7 +96,31 @@ export class AuthController {
 
   @Get('v1/users/me')
   @UseGuards(AuthGuard)
-  me(@Req() req: AuthedRequest) {
+  async me(@Req() req: AuthedRequest) {
+    if (process.env.IDENTITY_USE_GRPC === '1' && req.user?.userId) {
+      try {
+        const u = await this.identityGrpc.getUser(req.user.userId);
+        return {
+          user: {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            emailVerified: u.email_verified,
+            displayName: u.display_name || null,
+            bio: u.bio || null,
+            avatarMediaId: u.avatar_media_id || null,
+            visibility: u.visibility,
+            status: u.status,
+            isVerified: u.is_verified,
+            followerCount: Number(u.follower_count),
+            followingCount: Number(u.following_count),
+            postCount: Number(u.post_count),
+          },
+        };
+      } catch {
+        // fall through to HTTP proxy
+      }
+    }
     const authorization = this.bearer(req);
     return this.forward(
       'GET',
@@ -114,6 +144,18 @@ export class AuthController {
     return this.forward(
       'GET',
       `/v1/users/by-username/${encodeURIComponent(username)}`,
+    );
+  }
+
+  @Delete('v1/users/me')
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  deactivate(@Req() req: AuthedRequest) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'DELETE',
+      '/v1/users/me',
+      authorization ? { authorization } : {},
     );
   }
 

@@ -25,6 +25,7 @@ import { ConsoleEmailAdapter } from './email/console-email.adapter';
 import { HealthController } from './health.controller';
 import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
 import { SessionService } from './tokens/session.service';
+import { IdentityGrpcController } from './grpc/identity.grpc.controller';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 
@@ -35,7 +36,12 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
 
 @Global()
 @Module({
-  controllers: [AuthController, UsersController, HealthController],
+  controllers: [
+    AuthController,
+    UsersController,
+    HealthController,
+    IdentityGrpcController,
+  ],
   providers: [
     {
       provide: PG_POOL,
@@ -118,8 +124,9 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
     },
     {
       provide: UsersService,
-      inject: [PG_POOL],
-      useFactory: (pool: Pool) => new UsersService(pool),
+      inject: [PG_POOL, SessionService],
+      useFactory: (pool: Pool, sessions: SessionService) =>
+        new UsersService(pool, sessions),
     },
     {
       provide: JwtKeyRing,

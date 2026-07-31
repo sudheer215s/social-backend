@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Pool } from 'pg';
+import { withTransaction } from '@social/platform-db';
+import type { SessionService } from '../tokens/session.service';
 import type { UpdateProfileInput } from './profile.validation';
 
 export interface PublicProfile {
@@ -28,7 +30,10 @@ export interface PrivateProfile extends PublicProfile {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly sessions?: SessionService,
+  ) {}
 
   async getById(userId: string): Promise<PrivateProfile> {
     const row = await this.loadUser('id', userId);
@@ -46,6 +51,31 @@ export class UsersService {
     // Private accounts still return a profile shell for username lookups;
     // content visibility is enforced by post/graph services later.
     return mapPublic(row);
+  }
+
+  /**
+   * Soft-deactivate account: status=deactivated, erase_after +30d, revoke sessions.
+   */
+  async deactivate(userId: string): Promise<void> {
+    const result = await withTransaction(this.pool, async (client) => {
+      const updated = await client.query(
+        `UPDATE identity.users
+         SET status = 'deactivated',
+             deactivated_at = now(),
+             erase_after = now() + interval '30 days',
+             updated_at = now()
+         WHERE id = $1 AND status = 'active'
+         RETURNING id`,
+        [userId],
+      );
+      return (updated.rowCount ?? 0) > 0;
+    });
+    if (!result) {
+      throw new NotFoundException('User not found or already deactivated');
+    }
+    if (this.sessions) {
+      await this.sessions.revokeAllForUser(userId);
+    }
   }
 
   async updateProfile(

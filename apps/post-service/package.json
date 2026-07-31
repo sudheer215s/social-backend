@@ -1,30 +1,30 @@
 {
-  "name": "@social/api-gateway",
+  "name": "@social/post-service",
   "version": "0.0.1",
   "private": true,
-  "description": "Public HTTP edge: JWT verify, routing to identity (Phase 1)",
+  "description": "Posts and likes (Phase 2)",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "start": "nest start",
     "dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-    "test": "jest"
+    "test": "jest",
+    "test:integration": "jest --config ./test/jest.integration.config.js --runInBand"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.14.4",
-    "@grpc/proto-loader": "^0.8.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
-    "@nestjs/microservices": "^11.1.28",
     "@nestjs/platform-express": "^11.0.1",
-    "@social/platform-redis": "workspace:^",
+    "@social/platform-db": "workspace:*",
     "@social/platform-telemetry": "workspace:*",
     "jose": "5",
+    "pg": "^8.13.3",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "uuidv7": "^1.0.2",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
@@ -33,23 +33,17 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
-    "@types/supertest": "^6.0.2",
+    "@types/pg": "^8.11.11",
     "jest": "^30.0.0",
-    "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.7.3"
   },
   "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
+    "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
+    "testPathIgnorePatterns": [".*\\.integration\\.spec\\.ts$"],
+    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
     "testEnvironment": "node"
   }
 }

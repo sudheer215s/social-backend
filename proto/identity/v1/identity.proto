@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package identity.v1;
+
+service IdentityService {
+  rpc GetUser (GetUserRequest) returns (User);
+  rpc GetUserByUsername (GetUserByUsernameRequest) returns (User);
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserByUsernameRequest {
+  string username = 1;
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  bool email_verified = 4;
+  string display_name = 5;
+  string bio = 6;
+  string avatar_media_id = 7;
+  string visibility = 8;
+  string status = 9;
+  bool is_verified = 10;
+  int64 follower_count = 11;
+  int64 following_count = 12;
+  int64 post_count = 13;
+}

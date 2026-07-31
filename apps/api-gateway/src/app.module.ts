@@ -12,15 +12,17 @@ import {
 } from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
 import { AuthController } from './auth/auth.controller';
+import { ContentController } from './content/content.controller';
 import { AuthGuard } from './auth/auth.guard';
 import { JwtVerifier } from './auth/jwt-verifier';
 import { HealthController } from './health.controller';
+import { IdentityGrpcClient } from './proxy/identity.grpc.client';
 import { IdentityProxy } from './proxy/identity.proxy';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
 import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
 
 @Module({
-  controllers: [AuthController, HealthController],
+  controllers: [AuthController, ContentController, HealthController],
   providers: [
     {
       provide: HealthService,
@@ -79,6 +81,13 @@ import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
       useFactory: () =>
         new IdentityProxy(
           process.env.IDENTITY_BASE_URL ?? 'http://127.0.0.1:3001',
+        ),
+    },
+    {
+      provide: IdentityGrpcClient,
+      useFactory: () =>
+        new IdentityGrpcClient(
+          process.env.IDENTITY_GRPC_URL ?? '127.0.0.1:50051',
         ),
     },
     {

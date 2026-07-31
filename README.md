@@ -128,7 +128,9 @@ nvm use
 bash scripts/dev-setup.sh   # or: pnpm dev:setup
 pnpm dev                    # hello-service (watch)
 pnpm dev:identity           # identity-service on :3001
-pnpm dev:gateway            # api-gateway on :3000 (proxies identity)
+pnpm dev:gateway            # api-gateway on :3000
+pnpm dev:post               # post-service on :3002
+pnpm dev:graph              # graph-service on :3003
 ```
 
 **Manual:**
@@ -165,7 +167,9 @@ social-backend/
 ├── apps/
 │   ├── hello-service/             # Phase 0 smoke service (Nest)
 │   ├── identity-service/          # Phase 1 auth (register/login/tokens/email)
-│   └── api-gateway/               # Public edge: JWT verify + auth proxy
+│   ├── api-gateway/               # Public edge: JWT verify + auth proxy
+│   ├── post-service/              # Phase 2 posts + likes
+│   └── graph-service/             # Phase 2 follows + blocks
 ├── libs/
 │   ├── platform-config/           # fail-fast Zod config
 │   ├── platform-telemetry/        # Pino logger, redaction, health probes

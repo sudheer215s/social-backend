@@ -35,6 +35,24 @@
       "compilerOptions": {
         "tsConfigPath": "apps/api-gateway/tsconfig.build.json"
       }
+    },
+    "post-service": {
+      "type": "application",
+      "root": "apps/post-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/post-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/post-service/tsconfig.build.json"
+      }
+    },
+    "graph-service": {
+      "type": "application",
+      "root": "apps/graph-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/graph-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/graph-service/tsconfig.build.json"
+      }
     }
   }
 }

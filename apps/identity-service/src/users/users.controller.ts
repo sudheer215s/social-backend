@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Req,
@@ -43,5 +45,12 @@ export class UsersController {
   async byUsername(@Param('username') username: string) {
     const user = await this.users.getPublicByUsername(username);
     return { user };
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  async deactivate(@Req() req: IdentityAuthedRequest): Promise<void> {
+    await this.users.deactivate(req.userId!);
   }
 }
