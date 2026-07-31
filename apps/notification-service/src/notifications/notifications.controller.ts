@@ -16,10 +16,7 @@ export class NotificationsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async list(
-    @Req() req: AuthedRequest,
-    @Query('limit') limit?: string,
-  ) {
+  async list(@Req() req: AuthedRequest, @Query('limit') limit?: string) {
     const items = await this.notifications.listForUser(
       req.userId!,
       limit ? Number(limit) : 30,
@@ -34,12 +31,20 @@ export class NotificationsController {
     return { unreadCount: await this.notifications.unreadCount(req.userId!) };
   }
 
+  @Get('batch')
+  @UseGuards(JwtAuthGuard)
+  async batch(@Req() req: AuthedRequest, @Query('ids') ids?: string) {
+    const list = (ids ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const items = await this.notifications.getByIds(req.userId!, list);
+    return { items };
+  }
+
   @Post('read')
   @UseGuards(JwtAuthGuard)
-  async markRead(
-    @Req() req: AuthedRequest,
-    @Body() body: { ids?: string[] },
-  ) {
+  async markRead(@Req() req: AuthedRequest, @Body() body: { ids?: string[] }) {
     const updated = await this.notifications.markRead(req.userId!, body?.ids);
     return { updated };
   }

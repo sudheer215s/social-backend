@@ -11,6 +11,7 @@ import {
   createProducer,
   startReliableConsumer,
 } from '@social/platform-events';
+import { createRedisClient, type RedisClient } from '@social/platform-redis';
 import { HealthService } from '@social/platform-telemetry';
 import type { Consumer, Producer } from 'kafkajs';
 import type { Pool } from 'pg';
@@ -21,6 +22,7 @@ import { NotificationsController } from './notifications/notifications.controlle
 import { NotificationsService } from './notifications/notifications.service';
 
 export const PG_POOL = Symbol('PG_POOL');
+export const REDIS = Symbol('REDIS');
 
 const CONSUMER_GROUP = 'notification-processor';
 
@@ -39,6 +41,19 @@ const CONSUMER_GROUP = 'notification-processor';
       },
     },
     {
+      provide: REDIS,
+      useFactory: (): RedisClient | null => {
+        if (process.env.REDIS_DISABLED === '1') return null;
+        try {
+          return createRedisClient(
+            process.env.REDIS_URL ?? 'redis://127.0.0.1:6379',
+          );
+        } catch {
+          return null;
+        }
+      },
+    },
+    {
       provide: HealthService,
       inject: [PG_POOL],
       useFactory: (pool: Pool) =>
@@ -48,8 +63,9 @@ const CONSUMER_GROUP = 'notification-processor';
     },
     {
       provide: NotificationsService,
-      inject: [PG_POOL],
-      useFactory: (pool: Pool) => new NotificationsService(pool),
+      inject: [PG_POOL, REDIS],
+      useFactory: (pool: Pool, redis: RedisClient | null) =>
+        new NotificationsService(pool, redis),
     },
     JwtAuthGuard,
   ],
@@ -61,6 +77,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(REDIS) private readonly redis: RedisClient | null,
     @Inject(NotificationsService)
     private readonly notifications: NotificationsService,
   ) {}
@@ -107,6 +124,7 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     if (this.stopConsumer) await this.stopConsumer();
     if (this.producer) await this.producer.disconnect();
+    this.redis?.disconnect();
     await this.pool.end();
   }
 }

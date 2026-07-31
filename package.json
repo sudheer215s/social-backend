@@ -21,7 +21,7 @@
     "compose:down": "docker compose -f docker/docker-compose.yml down",
     "compose:ps": "docker compose -f docker/docker-compose.yml ps",
     "compose:check": "bash scripts/check-compose.sh",
-    "test:integration": "pnpm --filter @social/platform-db test:integration && pnpm --filter @social/platform-redis test:integration && pnpm --filter @social/identity-service test:integration && pnpm --filter @social/post-service test:integration && pnpm --filter @social/graph-service test:integration && pnpm --filter @social/notification-service test:integration && pnpm --filter @social/search-service test:integration",
+    "test:integration": "pnpm --filter @social/platform-db test:integration && pnpm --filter @social/platform-redis test:integration && pnpm --filter @social/identity-service test:integration && pnpm --filter @social/post-service test:integration && pnpm --filter @social/graph-service test:integration && pnpm --filter @social/notification-service test:integration && pnpm --filter @social/search-service test:integration && pnpm --filter @social/realtime-gateway test:integration",
     "docker:build:hello": "docker build -f docker/Dockerfile.hello-service -t social-hello:local .",
     "dev:setup": "bash scripts/dev-setup.sh",
     "dev:identity": "turbo run dev --filter=@social/identity-service",
@@ -31,6 +31,7 @@
     "dev:timeline": "turbo run dev --filter=@social/timeline-service",
     "dev:notification": "turbo run dev --filter=@social/notification-service",
     "dev:search": "turbo run dev --filter=@social/search-service",
+    "dev:realtime": "turbo run dev --filter=@social/realtime-gateway",
     "dlq:list": "node scripts/dlq-inspect.mjs list",
     "dlq:redrive": "node scripts/dlq-inspect.mjs redrive"
   },

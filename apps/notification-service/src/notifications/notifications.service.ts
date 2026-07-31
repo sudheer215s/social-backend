@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { withTransaction } from '@social/platform-db';
+import type { RedisClient } from '@social/platform-redis';
 import { uuidv7 } from 'uuidv7';
+import { publishNotificationPointer } from './delivery-stream';
 
 const GROUP_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const ACTOR_CAP = 8;
@@ -25,7 +27,12 @@ export interface NotificationDto {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly pool: Pool) {}
+  private readonly log = new Logger(NotificationsService.name);
+
+  constructor(
+    private readonly pool: Pool,
+    private readonly redis: RedisClient | null = null,
+  ) {}
 
   async processDomainEvent(input: {
     eventId: string;
@@ -35,7 +42,7 @@ export class NotificationsService {
     const mapped = mapEvent(input.eventType, input.payload);
     if (!mapped) return 'skipped';
 
-    return withTransaction(this.pool, async (client) => {
+    const outcome = await withTransaction(this.pool, async (client) => {
       const dedupe = await client.query(
         `INSERT INTO notification.processed_events (consumer_group, event_id)
          VALUES ($1, $2::uuid)
@@ -44,18 +51,18 @@ export class NotificationsService {
         [CONSUMER_GROUP, input.eventId],
       );
       if ((dedupe.rowCount ?? 0) === 0) {
-        return 'duplicate';
+        return { status: 'duplicate' as const };
       }
 
       if (mapped.actorId === mapped.recipientId) {
-        return 'skipped';
+        return { status: 'skipped' as const };
       }
 
       const groupWindow = Math.floor(Date.now() / GROUP_WINDOW_MS);
       const id = uuidv7();
 
-      // Upsert aggregation group
-      await client.query(
+      // Upsert aggregation group; RETURNING yields the live row id
+      const upsert = await client.query<{ id: string; type: string }>(
         `INSERT INTO notification.notifications
            (id, user_id, type, entity_type, entity_id, actor_ids, actor_count,
             group_key, group_window, created_at, updated_at)
@@ -72,7 +79,8 @@ export class NotificationsService {
            ),
            actor_count = notification.notifications.actor_count + 1,
            is_read = false,
-           updated_at = now()`,
+           updated_at = now()
+         RETURNING id, type`,
         [
           id,
           mapped.recipientId,
@@ -84,14 +92,32 @@ export class NotificationsService {
           groupWindow,
         ],
       );
-      return 'handled';
+      const row = upsert.rows[0];
+      return {
+        status: 'handled' as const,
+        userId: mapped.recipientId,
+        notificationId: row?.id ?? id,
+        type: row?.type ?? mapped.type,
+      };
     });
+
+    if (outcome.status === 'handled' && this.redis) {
+      try {
+        await publishNotificationPointer(this.redis, {
+          userId: outcome.userId,
+          notificationId: outcome.notificationId,
+          type: outcome.type,
+        });
+      } catch (err) {
+        // Realtime is best-effort; durable row is already committed.
+        this.log.warn(`stream publish failed: ${String(err)}`);
+      }
+    }
+
+    return outcome.status;
   }
 
-  async listForUser(
-    userId: string,
-    limit = 30,
-  ): Promise<NotificationDto[]> {
+  async listForUser(userId: string, limit = 30): Promise<NotificationDto[]> {
     const rows = await this.pool.query(
       `SELECT id, user_id, type, entity_type, entity_id, actor_ids, actor_count,
               group_key, is_read, created_at, updated_at
@@ -130,6 +156,18 @@ export class NotificationsService {
       [userId],
     );
     return r.rowCount ?? 0;
+  }
+
+  async getByIds(userId: string, ids: string[]): Promise<NotificationDto[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.pool.query(
+      `SELECT id, user_id, type, entity_type, entity_id, actor_ids, actor_count,
+              group_key, is_read, created_at, updated_at
+       FROM notification.notifications
+       WHERE user_id = $1 AND id = ANY($2::uuid[])`,
+      [userId, ids.slice(0, 100)],
+    );
+    return (rows.rows as NotifRow[]).map(mapRow);
   }
 }
 

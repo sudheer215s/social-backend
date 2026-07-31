@@ -303,4 +303,18 @@ export class ContentController {
       `/v1/search${qs}`,
     );
   }
+
+  /** Short-lived ticket for SSE on realtime-gateway (not JWT-in-query). */
+  @Post('v1/realtime/ticket')
+  @UseGuards(AuthGuard)
+  realtimeTicket(@Req() req: AuthedRequest) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'REALTIME_BASE_URL',
+      'http://127.0.0.1:3007',
+      'POST',
+      '/v1/realtime/ticket',
+      authorization ? { authorization } : {},
+    );
+  }
 }
