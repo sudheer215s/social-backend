@@ -18,9 +18,8 @@ export class GraphController {
 
   @Post('follows/:userId')
   @UseGuards(JwtAuthGuard)
-  @HttpCode(204)
   async follow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
-    await this.graph.follow(req.userId!, userId);
+    return this.graph.follow(req.userId!, userId);
   }
 
   @Delete('follows/:userId')
@@ -28,6 +27,38 @@ export class GraphController {
   @HttpCode(204)
   async unfollow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     await this.graph.unfollow(req.userId!, userId);
+  }
+
+  @Get('follow-requests/incoming')
+  @UseGuards(JwtAuthGuard)
+  async incomingRequests(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+  ) {
+    const items = await this.graph.listIncomingRequests(
+      req.userId!,
+      limit ? Number(limit) : 50,
+    );
+    return { items };
+  }
+
+  @Post('follow-requests/:requesterId/accept')
+  @UseGuards(JwtAuthGuard)
+  async acceptRequest(
+    @Req() req: AuthedRequest,
+    @Param('requesterId') requesterId: string,
+  ) {
+    return this.graph.acceptFollowRequest(req.userId!, requesterId);
+  }
+
+  @Post('follow-requests/:requesterId/reject')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  async rejectRequest(
+    @Req() req: AuthedRequest,
+    @Param('requesterId') requesterId: string,
+  ) {
+    await this.graph.rejectFollowRequest(req.userId!, requesterId);
   }
 
   @Get('following/:userId')

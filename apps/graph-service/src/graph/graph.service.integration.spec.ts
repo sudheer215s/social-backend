@@ -31,7 +31,9 @@ describe('GraphService (integration)', () => {
 
   it('follows, lists, blocks (severs follows), unblocks', async () => {
     if (!available) return;
-    await graph.follow(a, b);
+    // identity may be down → follow fails open as public
+    const r = await graph.follow(a, b);
+    expect(r.state).toBe('following');
     await expect(graph.isFollowing(a, b)).resolves.toBe(true);
     const following = await graph.listFollowing(a);
     expect(following.some((x) => x.userId === b)).toBe(true);
@@ -68,5 +70,33 @@ describe('GraphService (integration)', () => {
 
     await graph.unfollow(a, b);
     await expect(graph.isFollowing(a, b)).resolves.toBe(false);
+  });
+
+  it('accepts and rejects follow requests', async () => {
+    if (!available) return;
+    const requester = uuidv7();
+    const target = uuidv7();
+    await pool.query(
+      `INSERT INTO graph.follow_requests (requester_id, target_id)
+       VALUES ($1, $2)`,
+      [requester, target],
+    );
+    const incoming = await graph.listIncomingRequests(target);
+    expect(incoming.some((i) => i.userId === requester)).toBe(true);
+
+    const accepted = await graph.acceptFollowRequest(target, requester);
+    expect(accepted).toEqual({ state: 'following', changed: true });
+    await expect(graph.isFollowing(requester, target)).resolves.toBe(true);
+
+    const requester2 = uuidv7();
+    await pool.query(
+      `INSERT INTO graph.follow_requests (requester_id, target_id)
+       VALUES ($1, $2)`,
+      [requester2, target],
+    );
+    await graph.rejectFollowRequest(target, requester2);
+    const after = await graph.listIncomingRequests(target);
+    expect(after.some((i) => i.userId === requester2)).toBe(false);
+    await expect(graph.isFollowing(requester2, target)).resolves.toBe(false);
   });
 });

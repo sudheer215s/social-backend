@@ -55,6 +55,15 @@ export class UsersService {
     return mapPublic(row);
   }
 
+  /** Public profile shell by id (graph follow visibility, etc.). */
+  async getPublicById(userId: string): Promise<PublicProfile> {
+    const row = await this.loadUser('id', userId);
+    if (!row || row.status === 'erased' || row.status === 'deactivated') {
+      throw new NotFoundException('User not found');
+    }
+    return mapPublic(row);
+  }
+
   /**
    * Soft-deactivate account: status=deactivated, erase_after +30d, revoke sessions.
    */

@@ -47,6 +47,12 @@ export class UsersController {
     return { user };
   }
 
+  @Get(':id')
+  async byId(@Param('id') id: string) {
+    const user = await this.users.getPublicById(id);
+    return { user };
+  }
+
   @Delete('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(204)

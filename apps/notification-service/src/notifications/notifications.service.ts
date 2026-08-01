@@ -9,7 +9,8 @@ const GROUP_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const ACTOR_CAP = 8;
 const CONSUMER_GROUP = 'notification-processor';
 
-export type NotifType = 'follow' | 'like' | 'reply' | 'mention' | 'repost';
+export type NotifType =
+  'follow' | 'follow_request' | 'like' | 'reply' | 'mention' | 'repost';
 
 export interface NotificationDto {
   id: string;
@@ -229,6 +230,19 @@ function mapEvent(
       entityType: 'user',
       entityId: followerId,
       groupKey: 'follow',
+    };
+  }
+  if (eventType === 'follow.requested') {
+    const requesterId = asString(payload.requesterId);
+    const targetId = asString(payload.targetId);
+    if (!requesterId || !targetId) return null;
+    return {
+      type: 'follow_request',
+      recipientId: targetId,
+      actorId: requesterId,
+      entityType: 'user',
+      entityId: requesterId,
+      groupKey: 'follow_request',
     };
   }
   if (eventType === 'post.liked') {

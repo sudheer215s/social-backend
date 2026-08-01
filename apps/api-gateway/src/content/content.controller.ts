@@ -145,7 +145,6 @@ export class ContentController {
 
   @Post('v1/graph/follows/:userId')
   @UseGuards(AuthGuard)
-  @HttpCode(204)
   follow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -167,6 +166,56 @@ export class ContentController {
       'http://127.0.0.1:3003',
       'DELETE',
       `/v1/graph/follows/${userId}`,
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Get('v1/graph/follow-requests/incoming')
+  @UseGuards(AuthGuard)
+  incomingFollowRequests(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+  ) {
+    const authorization = this.bearer(req);
+    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    return this.forward(
+      'GRAPH_BASE_URL',
+      'http://127.0.0.1:3003',
+      'GET',
+      `/v1/graph/follow-requests/incoming${q}`,
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Post('v1/graph/follow-requests/:requesterId/accept')
+  @UseGuards(AuthGuard)
+  acceptFollowRequest(
+    @Req() req: AuthedRequest,
+    @Param('requesterId') requesterId: string,
+  ) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'GRAPH_BASE_URL',
+      'http://127.0.0.1:3003',
+      'POST',
+      `/v1/graph/follow-requests/${requesterId}/accept`,
+      authorization ? { authorization } : {},
+    );
+  }
+
+  @Post('v1/graph/follow-requests/:requesterId/reject')
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  rejectFollowRequest(
+    @Req() req: AuthedRequest,
+    @Param('requesterId') requesterId: string,
+  ) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'GRAPH_BASE_URL',
+      'http://127.0.0.1:3003',
+      'POST',
+      `/v1/graph/follow-requests/${requesterId}/reject`,
       authorization ? { authorization } : {},
     );
   }

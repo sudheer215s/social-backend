@@ -1,35 +1,41 @@
 # Distributed Social Media Backend
 
-A NestJS microservices backend for a public microblogging product: accounts, posts, replies, reposts, likes, an asymmetric follow graph, home timelines, real-time notifications, and search.
+A NestJS microservices backend for a public microblogging product: accounts, posts, likes, an asymmetric follow graph (including **private accounts / follow requests**), home timelines, real-time notifications, and search.
 
 Inspired by feed systems like X (Twitter) and LinkedIn — **distributed services and event-driven infrastructure**, not a decentralized or federated network.
 
-|                  |                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| **Status**       | Design complete (v2). Implementation starting at Phase 0.                            |
-| **Stack**        | NestJS · TypeScript · gRPC · Kafka · PostgreSQL · Redis · Elasticsearch · Kubernetes |
-| **Design point** | 1M users · 200K DAU · ~700 RPS peak · sized for 1,500 RPS                            |
+|                  |                                                                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**       | **Backend MVP in progress** — core services, events, realtime, Docker/CI, and k8s scaffolding landed. Product gaps remain (see below). |
+| **Stack**        | NestJS · TypeScript · gRPC · Kafka · PostgreSQL · Redis · Elasticsearch · Kubernetes                                                   |
+| **Design point** | 1M users · 200K DAU · ~700 RPS peak · sized for 1,500 RPS                                                                              |
 
 ---
 
 ## What this is
 
-Eight deployables: two gateways (HTTP, WebSocket) and six domain services. Each service owns its data. Request/response uses **gRPC**; propagation uses **Kafka** (transactional outbox, effectively-once consumers). Timelines are derived state in Redis and can be rebuilt from durable sources.
+Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-service` smoke). Each domain service owns its schema. Async work uses **Kafka** via a **transactional outbox**; consumers use dedupe + retry/DLQ. Timelines are derived Redis state and rebuildable.
 
-### Product surface
+### Implemented surface
 
-| Area          | Capabilities                                                              |
-| ------------- | ------------------------------------------------------------------------- |
-| Identity      | Registration, login, JWT + rotating refresh, profiles, email verification |
-| Posts         | Create/delete, likes, replies, reposts, hashtags, mentions                |
-| Graph         | Follow/unfollow, blocks, mutes, private accounts                          |
-| Timeline      | Home + user timelines (hybrid fan-out, rebuild-safe)                      |
-| Notifications | In-app alerts with real-time delivery                                     |
-| Search        | Users, posts, trending                                                    |
+| Area          | Capabilities                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
+| Posts         | Create/list/delete, likes, outbox events, soft-delete cascade on user erase                                                          |
+| Graph         | Follow/unfollow, **follow requests** (private accounts), blocks, mutes, cascade jobs on erase                                        |
+| Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter at hydration                                                |
+| Notifications | Follow/like/follow_request aggregation, Redis stream pointers, block/mute suppress                                                   |
+| Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
+| Search        | ES post/user index + query API                                                                                                       |
+| Edge          | API gateway (JWT, rate limit, sid revocation), route inventory, smoke e2e                                                            |
 
-### Explicit non-goals (v2)
+### Explicit non-goals (v2 design)
 
-Media processing pipeline, direct messaging, ML ranking, multi-region active-active, ads, and automated moderation AI. Seams are left in the design where those can attach later.
+Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated moderation AI.
+
+### Known gaps (not done yet)
+
+Private-content **timeline authz** for non-followers is partial; replies/reposts/mentions product flows; search post-filter authz; full HTTP RED metrics; production secret store / image digests wired for real clusters.
 
 ---
 
@@ -41,70 +47,17 @@ Clients (Web / Mobile)
         ▼
 ┌───────────────┐     ┌──────────────────┐
 │  API Gateway  │     │ Realtime Gateway │
-│  (REST/HTTP)  │     │   (WebSocket)    │
+│  REST :3000   │     │  SSE/WS :3007    │
 └───────┬───────┘     └────────┬─────────┘
-        │ gRPC                 │
+        │                      │
         ▼                      ▼
-┌──────────── Identity · Post · Graph · Timeline · Notification · Search ────────────┐
-│                              (domain services)                                     │
-└────────────┬───────────────────────────────────────────────┬───────────────────────┘
-             │                                               │
-             ▼                                               ▼
-      Kafka (events)                                   PostgreSQL (per service)
-      Redis (timelines, cache, rate limits)            Elasticsearch (search)
+ Identity · Post · Graph · Timeline · Notification · Search
+        │                      │
+        ▼                      ▼
+ Kafka (outbox events)    Postgres · Redis · Elasticsearch
 ```
 
-**Load-bearing ideas:** UUIDv7 IDs, transactional outbox, effectively-once consumers, disposable rebuildable timelines, filter-at-hydration (never “delete from N timelines”), blocks fail closed.
-
 Full design: [`docs/01-architecture/system-design.md`](docs/01-architecture/system-design.md)
-
----
-
-## Documentation
-
-Start here: **[`docs/README.md`](docs/README.md)**  
-Implementation roadmap: **[`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap/implementation-roadmap.md)**
-
-| Path                                                                                     | Contents                                               |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [`docs/01-architecture/`](docs/01-architecture/)                                         | System design + ADRs                                   |
-| [`docs/02-components/`](docs/02-components/)                                             | Per-service specs                                      |
-| [`docs/03-cross-cutting/`](docs/03-cross-cutting/)                                       | API, security, data, SLOs, reliability, CI/CD, testing |
-| [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap/implementation-roadmap.md) | 9 phases · 22 weeks · exit criteria                    |
-| [`docs/00-review/`](docs/00-review/) · [`docs/04-review/`](docs/04-review/)              | Design reviews (v1 → v2)                               |
-
-Historical v1 planning docs remain in the repo root for reference and are superseded by `docs/`.
-
----
-
-## Implementation roadmap
-
-| Phase | Focus                                                         |
-| ----: | ------------------------------------------------------------- |
-|     0 | Platform: monorepo, CI/CD, observability, local Compose stack |
-|     1 | Identity + API gateway (auth, tokens, profiles)               |
-|     2 | Posts + social graph + authorization matrix                   |
-|     3 | Event backbone (outbox, consumers, DLQ)                       |
-|     4 | Timeline fan-out and read path                                |
-|     5 | Notifications + realtime gateway                              |
-|     6 | Search + trending                                             |
-|     7 | Hardening (abuse, erasure, DR)                                |
-|     8 | Scale validation and launch readiness                         |
-
-Details and gates: [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap/implementation-roadmap.md)
-
----
-
-## Repository status
-
-| Item                      | State                                                          |
-| ------------------------- | -------------------------------------------------------------- |
-| Architecture (v2)         | Documented and review-approved                                 |
-| Application code          | Monorepo: hello-service + platform-config/telemetry/db/grpc    |
-| Local multi-service stack | Compose: Postgres, PgBouncer, Redis, Redpanda, ES, Jaeger, OTel |
-| Production deploy         | Not yet                                                        |
-
-This is a deliberate **design-first** repo: the hard distributed-systems choices (timeline algorithm, capacity model, consistency, authz) are specified before service code lands.
 
 ---
 
@@ -112,106 +65,144 @@ This is a deliberate **design-first** repo: the hard distributed-systems choices
 
 - **Node.js** 22+ (see [`.nvmrc`](.nvmrc))
 - **pnpm** 9 (`packageManager` in `package.json`)
+- **Docker** (Compose for infra; optional app images)
 
 ```bash
-# optional: match Node version
-nvm use
+nvm use   # optional
 ```
 
 ---
 
 ## Quick start
 
-**Clean clone (P0-T16):** one script installs deps, starts Compose, builds, and tests.
-
-```bash
-bash scripts/dev-setup.sh   # or: pnpm dev:setup
-pnpm dev                    # hello-service (watch)
-pnpm dev:identity           # identity-service on :3001
-pnpm dev:gateway            # api-gateway on :3000
-pnpm dev:post               # post-service on :3002
-pnpm dev:graph              # graph-service on :3003
-pnpm dev:timeline           # timeline-service on :3004
-```
-
-**Manual:**
+### 1. Infra + deps
 
 ```bash
 pnpm install
 cp .env.example .env
-pnpm compose:up             # Postgres, PgBouncer, Redis, Redpanda, ES, Jaeger, OTel
-pnpm docker:build:hello     # optional image
-pnpm dev
-# GET /  GET /health/live  GET /health/ready
-# Jaeger UI: http://127.0.0.1:16686  ·  ES: http://127.0.0.1:9200
+pnpm compose:up          # Postgres, PgBouncer, Redis, Redpanda, ES, Jaeger, OTel
+pnpm compose:check       # optional health script
 ```
 
-Other scripts (Turbo, all packages):
+### 2. Run services (local processes)
 
 ```bash
-pnpm build            # compile all packages
-pnpm test             # unit tests
-pnpm lint             # ESLint
-pnpm typecheck        # tsc --noEmit
-pnpm --filter @social/hello-service test:e2e
-pnpm --filter @social/platform-db test:integration  # needs compose:up
+pnpm dev:identity        # :3001 (+ gRPC :50051)
+pnpm dev:gateway         # :3000
+pnpm dev:post            # :3002
+pnpm dev:graph           # :3003
+pnpm dev:timeline        # :3004
+pnpm dev:notification    # :3005
+pnpm dev:search          # :3006
+pnpm dev:realtime        # :3007
 ```
 
-`hello-service` listens on `PORT` (default 3000).
+Or Docker apps on top of infra:
+
+```bash
+pnpm compose:stack       # infra + build/start all app images
+pnpm smoke:e2e           # gateway register → post → follow → like → deactivate
+```
+
+### 3. Useful commands
+
+```bash
+pnpm build
+pnpm test
+pnpm test:integration    # needs compose:up
+pnpm routes:list
+pnpm openapi:export -- --out=/tmp/openapi.json
+pnpm dlq:list -- --topic social.post.v1
+```
+
+| Port         | Service               |
+| ------------ | --------------------- |
+| 3000         | api-gateway           |
+| 3001 / 50051 | identity HTTP / gRPC  |
+| 3002         | post                  |
+| 3003         | graph                 |
+| 3004         | timeline              |
+| 3005         | notification          |
+| 3006         | search                |
+| 3007         | realtime              |
+| 6432         | PgBouncer             |
+| 6379         | Redis                 |
+| 19092        | Kafka (Redpanda host) |
+| 9200         | Elasticsearch         |
+| 16686        | Jaeger UI             |
+
+---
+
+## Private accounts & follow requests
+
+Identity profile `visibility`:
+
+- `public` — follow creates an edge immediately (`user.followed`)
+- `followers` — follow creates a **request** (`follow.requested` → notification type `follow_request`)
+
+```http
+POST /v1/graph/follows/:userId          → { "state": "following"|"requested", "changed": true }
+GET  /v1/graph/follow-requests/incoming
+POST /v1/graph/follow-requests/:requesterId/accept
+POST /v1/graph/follow-requests/:requesterId/reject
+PATCH /v1/users/me  { "visibility": "followers" }
+```
+
+Accept emits `user.followed` in the same transaction. Reject is silent. Blocks clear follows **and** pending requests both ways.
 
 ---
 
 ## Project layout
 
 ```
-social-backend/
-├── apps/
-│   ├── hello-service/             # Phase 0 smoke service (Nest)
-│   ├── identity-service/          # Phase 1 auth (register/login/tokens/email)
-│   ├── api-gateway/               # Public edge: JWT verify + auth proxy
-│   ├── post-service/              # Phase 2 posts + likes
-│   ├── graph-service/             # Phase 2 follows + blocks
-│   └── timeline-service/          # Phase 3/4 home timeline + fan-out
-├── libs/
-│   ├── platform-config/           # fail-fast Zod config
-│   ├── platform-telemetry/        # Pino logger, redaction, health probes
-│   ├── platform-db/               # pg pool, Drizzle, transactions
-│   ├── platform-grpc/             # client policy defaults (retry budget)
-│   └── platform-testing/          # waitFor, withEnv, Docker helpers
-├── docker/                        # Compose + Dockerfile.hello-service
-├── .github/workflows/ci.yml       # lint · typecheck · test · build · e2e
-├── docs/                          # Architecture & roadmap (source of truth)
-├── pnpm-workspace.yaml
-├── turbo.json
-├── package.json
-└── README.md
+apps/
+  api-gateway/  identity-service/  post-service/  graph-service/
+  timeline-service/  notification-service/  search-service/
+  realtime-gateway/  hello-service/
+libs/
+  platform-config/  platform-db/  platform-events/  platform-redis/
+  platform-telemetry/  platform-grpc/  platform-testing/
+docker/           # infra + app Compose + Dockerfiles
+deploy/k8s/       # manifests, overlays, ESO, monitoring
+deploy/argocd/    # GitOps Applications
+scripts/          # smoke-e2e, routes, openapi, dlq-inspect, docker-build
+docs/             # architecture & component design (contract)
 ```
 
-Historical v1 docs remain in the repo root (superseded by `docs/`).
 ---
 
-## Tech choices
+## Deploy notes
 
-| Concern           | Choice                  | Why                                                                |
-| ----------------- | ----------------------- | ------------------------------------------------------------------ |
-| Framework         | NestJS + TypeScript     | Modular services, strong typing, first-class microservices support |
-| Sync RPC          | gRPC                    | Low latency, typed contracts                                       |
-| Async events      | Kafka (local: Redpanda) | Throughput, partitioning, durable log                              |
-| Primary store     | PostgreSQL              | ACID, complex queries; logical DB-per-service                      |
-| Cache / timelines | Redis                   | Sorted sets, low-latency reads, rebuildable state                  |
-| Search            | Elasticsearch           | Full-text + analytics                                              |
-| Orchestration     | Kubernetes              | Scale, deploy, resilience                                          |
+| Path                  | Purpose                                   |
+| --------------------- | ----------------------------------------- |
+| `pnpm compose:stack`  | Full local Docker stack                   |
+| `pnpm k8s:apply:dev`  | Kustomize dev overlay                     |
+| `pnpm k8s:apply:prod` | Prod overlay (registry + ExternalSecrets) |
+| `pnpm argocd:apply`   | Argo CD Applications                      |
 
-Decision records: [`docs/01-architecture/decisions.md`](docs/01-architecture/decisions.md)
+See [`deploy/k8s/README.md`](deploy/k8s/README.md).
 
 ---
 
-## Contributing / development notes
+## CI
 
-1. Treat **`docs/`** as the contract for behavior until code supersedes a section.
-2. Prefer small, reviewable commits aligned with roadmap phases.
-3. Do not invent cross-service joins; respect service ownership and event contracts.
-4. Observability, tests, and security controls ship **with** features (see roadmap definition of done).
+| Workflow    | What                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------- |
+| `ci.yml`    | lint, typecheck, unit tests, build, Docker image matrix, **infra + integration tests** |
+| `smoke.yml` | nightly/manual full stack + `smoke:e2e`                                                |
+
+---
+
+## Documentation
+
+| Path                                                                                     | Contents             |
+| ---------------------------------------------------------------------------------------- | -------------------- |
+| [`docs/README.md`](docs/README.md)                                                       | Doc index            |
+| [`docs/01-architecture/`](docs/01-architecture/)                                         | System design + ADRs |
+| [`docs/02-components/`](docs/02-components/)                                             | Per-service specs    |
+| [`docs/05-roadmap/implementation-roadmap.md`](docs/05-roadmap/implementation-roadmap.md) | Phased plan          |
+
+Treat **`docs/`** as the behavioral contract where code has not yet overridden it.
 
 ---
 

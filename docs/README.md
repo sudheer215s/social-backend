@@ -66,6 +66,22 @@ Design documentation for the social backend. Written as a review-then-redesign p
 | [`design-review-v2.md`](./04-review/design-review-v2.md) | Review of this document set; 10 fixes applied, 4 gaps accepted |
 | [`implementation-roadmap.md`](./05-roadmap/implementation-roadmap.md) | 22 weeks, 9 phases, with exit criteria |
 
+### `frontend/` — The web client
+| Document | |
+|---|---|
+| [`frontend/README.md`](./frontend/README.md) | Index and one-page summary |
+| [`frontend/01-architecture.md`](./frontend/01-architecture.md) | Stack, rendering strategy, layering, state ownership, performance budgets |
+| [`frontend/02-decisions.md`](./frontend/02-decisions.md) | FE-0001 … FE-0014 |
+| [`frontend/03-flows.md`](./frontend/03-flows.md) | Session machine, auth, timeline, compose, realtime, degradation |
+| [`frontend/04-modules/`](./frontend/04-modules/) | `api-client` · `data` · `realtime` · design system · features |
+| [`frontend/05-cross-cutting/`](./frontend/05-cross-cutting/) | Security, performance + accessibility, observability, testing |
+| [`frontend/06-review.md`](./frontend/06-review.md) | Design review — 13 findings; **2 require backend changes** |
+| [`frontend/07-roadmap.md`](./frontend/07-roadmap.md) | 14 weeks, 6 phases, sequenced against the backend |
+
+> **Two open backend requests from the frontend review**, both small and additive, both expensive to discover late:
+> **F3** — server-rendered public pages come from one IP and exhaust the 100/hour anonymous rate limit; rate-limit keying must accept a trusted `X-Forwarded-For`.
+> **F1** — the refresh token must be available as an `httpOnly` cookie; as a body parameter it forces web clients into JS-readable storage, which defeats reuse detection.
+
 ---
 
 ## The design in one page
