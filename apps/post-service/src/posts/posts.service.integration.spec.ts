@@ -128,4 +128,27 @@ describe('PostsService (integration)', () => {
     );
     expect(repostEvents.rowCount ?? 0).toBeGreaterThanOrEqual(1);
   });
+
+  it('stores hashtags and unresolved mentions when identity is down', async () => {
+    if (!available) return;
+    const created = await posts.create(authorId, {
+      content: 'hey @nobody_xyz_abc #CoolTag and #cooltag',
+    });
+    const mentions = await pool.query(
+      `SELECT raw_username, mentioned_user_id FROM post.mentions WHERE post_id = $1`,
+      [created.id],
+    );
+    expect(mentions.rowCount ?? 0).toBeGreaterThanOrEqual(1);
+    expect(mentions.rows[0]?.raw_username).toBe('nobody_xyz_abc');
+
+    const tags = await pool.query(
+      `SELECT h.tag FROM post.hashtags h
+       JOIN post.post_hashtags ph ON ph.hashtag_id = h.id
+       WHERE ph.post_id = $1`,
+      [created.id],
+    );
+    expect(tags.rows.some((r: { tag: string }) => r.tag === 'cooltag')).toBe(
+      true,
+    );
+  });
 });

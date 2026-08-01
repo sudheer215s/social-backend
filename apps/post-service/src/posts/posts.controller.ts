@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard, type AuthedRequest } from '../auth/jwt.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard';
 import { ZodValidationPipe } from '../common/zod.pipe';
 import { createPostSchema, type CreatePostInput } from './posts.validation';
 import { PostsService } from './posts.service';
@@ -41,30 +42,48 @@ export class PostsController {
   }
 
   @Get(':id/replies')
-  async replies(@Param('id') id: string, @Query('limit') limit?: string) {
-    const posts = await this.posts.listReplies(id, limit ? Number(limit) : 50);
+  @UseGuards(OptionalJwtAuthGuard)
+  async replies(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
+    const posts = await this.posts.listReplies(
+      id,
+      limit ? Number(limit) : 50,
+      req.userId,
+    );
     return { posts };
   }
 
   @Get(':id/thread')
-  async thread(@Param('id') id: string, @Query('limit') limit?: string) {
-    return this.posts.getThread(id, limit ? Number(limit) : 50);
+  @UseGuards(OptionalJwtAuthGuard)
+  async thread(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.posts.getThread(id, limit ? Number(limit) : 50, req.userId);
   }
 
   @Get(':id')
-  async get(@Param('id') id: string) {
-    const post = await this.posts.getById(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  async get(@Req() req: AuthedRequest, @Param('id') id: string) {
+    const post = await this.posts.getById(id, req.userId);
     return { post };
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   async listByAuthor(
+    @Req() req: AuthedRequest,
     @Query('authorId') authorId: string,
     @Query('limit') limit?: string,
   ) {
     const posts = await this.posts.listByAuthor(
       authorId,
       limit ? Number(limit) : 20,
+      req.userId,
     );
     return { posts };
   }

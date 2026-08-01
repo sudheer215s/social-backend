@@ -68,6 +68,7 @@ describe('SearchService (integration)', () => {
         postId: id,
         authorId,
         content: `event-indexed ${unique}`,
+        authorVisibility: 'public',
         createdAt: new Date().toISOString(),
       },
     });
@@ -77,6 +78,17 @@ describe('SearchService (integration)', () => {
       payload: { postId: id },
     });
     expect(skip).toBe('skipped');
+
+    const privateSkip = await svc.processDomainEvent({
+      eventType: 'post.created',
+      payload: {
+        postId: randomUUID(),
+        authorId,
+        content: `private ${unique}`,
+        authorVisibility: 'followers',
+      },
+    });
+    expect(privateSkip).toBe('skipped');
   });
 
   it('indexes user.created and removes on user.deactivated', async () => {

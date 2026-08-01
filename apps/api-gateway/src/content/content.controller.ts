@@ -80,48 +80,65 @@ export class ContentController {
 
   @Get('v1/posts')
   listPosts(
+    @Req() req: AuthedRequest,
     @Query('authorId') authorId: string,
     @Query('limit') limit?: string,
   ) {
     const q = new URLSearchParams({ authorId });
     if (limit) q.set('limit', limit);
+    const authorization = this.bearer(req);
     return this.forward(
       'POST_BASE_URL',
       'http://127.0.0.1:3002',
       'GET',
       `/v1/posts?${q}`,
+      authorization ? { authorization } : {},
     );
   }
 
   @Get('v1/posts/:id/replies')
-  listReplies(@Param('id') id: string, @Query('limit') limit?: string) {
+  listReplies(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
     const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    const authorization = this.bearer(req);
     return this.forward(
       'POST_BASE_URL',
       'http://127.0.0.1:3002',
       'GET',
       `/v1/posts/${id}/replies${q}`,
+      authorization ? { authorization } : {},
     );
   }
 
   @Get('v1/posts/:id/thread')
-  getThread(@Param('id') id: string, @Query('limit') limit?: string) {
+  getThread(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
     const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    const authorization = this.bearer(req);
     return this.forward(
       'POST_BASE_URL',
       'http://127.0.0.1:3002',
       'GET',
       `/v1/posts/${id}/thread${q}`,
+      authorization ? { authorization } : {},
     );
   }
 
   @Get('v1/posts/:id')
-  getPost(@Param('id') id: string) {
+  getPost(@Req() req: AuthedRequest, @Param('id') id: string) {
+    const authorization = this.bearer(req);
     return this.forward(
       'POST_BASE_URL',
       'http://127.0.0.1:3002',
       'GET',
       `/v1/posts/${id}`,
+      authorization ? { authorization } : {},
     );
   }
 

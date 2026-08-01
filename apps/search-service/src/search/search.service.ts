@@ -51,8 +51,31 @@ export interface SearchResult {
 export class SearchService {
   private readonly log = new Logger(SearchService.name);
   private ready = false;
+  private readonly identityBaseUrl: string;
 
-  constructor(private readonly es: EsClient) {}
+  constructor(private readonly es: EsClient) {
+    this.identityBaseUrl =
+      process.env.IDENTITY_BASE_URL ?? 'http://127.0.0.1:3001';
+  }
+
+  private async fetchAuthorVisibility(
+    authorId: string,
+  ): Promise<string | null> {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 300);
+      const res = await fetch(
+        `${this.identityBaseUrl}/v1/users/${encodeURIComponent(authorId)}`,
+        { signal: ac.signal },
+      );
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      const json = (await res.json()) as { user?: { visibility?: string } };
+      return json.user?.visibility ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   async ensureIndices(): Promise<void> {
     await this.es.ensureIndex(POSTS_INDEX, {
@@ -143,7 +166,15 @@ export class SearchService {
     createdAt?: string;
     likeCount?: number;
     replyCount?: number;
+    authorVisibility?: string;
+    authorStatus?: string;
   }): Promise<void> {
+    const visibility = input.authorVisibility ?? 'public';
+    // Private-account posts must not appear in the public search index.
+    if (visibility === 'followers' || visibility === 'private') {
+      await this.deletePost(input.postId);
+      return;
+    }
     const hashtags = extractHashtags(input.content);
     await this.es.indexDoc(POSTS_INDEX, input.postId, {
       id: input.postId,
@@ -152,8 +183,8 @@ export class SearchService {
       hashtags,
       like_count: input.likeCount ?? 0,
       reply_count: input.replyCount ?? 0,
-      author_visibility: 'public',
-      author_status: 'active',
+      author_visibility: visibility,
+      author_status: input.authorStatus ?? 'active',
       created_at: input.createdAt ?? new Date().toISOString(),
     });
   }
@@ -208,10 +239,20 @@ export class SearchService {
       const content = asString(input.payload.content);
       if (!postId || !authorId) return 'skipped';
       const createdAt = asString(input.payload.createdAt);
+      let authorVisibility = asString(input.payload.authorVisibility);
+      // Fail closed: unknown visibility → resolve, else treat as private.
+      if (!authorVisibility) {
+        authorVisibility =
+          (await this.fetchAuthorVisibility(authorId)) ?? 'followers';
+      }
+      if (authorVisibility === 'followers' || authorVisibility === 'private') {
+        return 'skipped';
+      }
       await this.indexPost({
         postId,
         authorId,
         content,
+        authorVisibility,
         ...(createdAt ? { createdAt } : {}),
       });
       return 'handled';

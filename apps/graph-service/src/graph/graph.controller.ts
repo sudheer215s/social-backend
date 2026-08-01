@@ -179,4 +179,17 @@ export class GraphController {
     );
     return { suppress };
   }
+
+  /** Internal: does followerId follow followeeId? */
+  @Get('relationship/following')
+  async followingCheck(
+    @Query('followerId') followerId: string,
+    @Query('followeeId') followeeId: string,
+  ) {
+    if (!followerId || !followeeId) {
+      return { following: false };
+    }
+    const following = await this.graph.isFollowing(followerId, followeeId);
+    return { following };
+  }
 }

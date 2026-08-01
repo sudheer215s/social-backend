@@ -9,8 +9,14 @@ import { withTransaction } from '@social/platform-db';
 import { appendOutbox } from '@social/platform-events';
 import { uuidv7 } from 'uuidv7';
 import type { CreatePostInput } from './posts.validation';
+import { extractHashtags, extractMentions } from './text-extract';
 
 export const POST_TOPIC = 'social.post.v1';
+
+export interface MentionDto {
+  username: string;
+  userId: string | null;
+}
 
 export interface PostDto {
   id: string;
@@ -24,6 +30,7 @@ export interface PostDto {
   replyCount: number;
   repostCount: number;
   createdAt: Date;
+  mentions?: MentionDto[];
 }
 
 const POST_SELECT = `id, author_id, content, media_refs, reply_to_id, thread_root_id,
@@ -31,7 +38,14 @@ const POST_SELECT = `id, author_id, content, media_refs, reply_to_id, thread_roo
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly pool: Pool) {}
+  private readonly identityBaseUrl: string;
+  private readonly graphBaseUrl: string;
+
+  constructor(private readonly pool: Pool) {
+    this.identityBaseUrl =
+      process.env.IDENTITY_BASE_URL ?? 'http://127.0.0.1:3001';
+    this.graphBaseUrl = process.env.GRAPH_BASE_URL ?? 'http://127.0.0.1:3003';
+  }
 
   async create(authorId: string, input: CreatePostInput): Promise<PostDto> {
     const id = uuidv7();
@@ -43,6 +57,12 @@ export class PostsService {
     const content = input.content ?? '';
     const mediaRefs = input.mediaRefs ?? [];
     const isPureRepost = !!repostOfId && content.length === 0;
+
+    // Enrichment outside the write TX (failure-tolerant for mentions).
+    const mentionUsernames = extractMentions(content);
+    const hashtags = extractHashtags(content);
+    const resolvedMentions = await this.resolveMentions(mentionUsernames);
+    const authorVisibility = await this.fetchUserVisibility(authorId);
 
     return withTransaction(this.pool, async (client) => {
       if (replyToId) {
@@ -87,7 +107,6 @@ export class PostsService {
           ],
         );
       } catch (err: unknown) {
-        // Unique pure-repost per author
         if (
           isPureRepost &&
           typeof err === 'object' &&
@@ -125,7 +144,14 @@ export class PostsService {
         );
       }
 
+      await this.persistHashtags(client, id, hashtags);
+      await this.persistMentions(client, id, resolvedMentions);
+
       const post = mapPost(row.rows[0] as PostRow);
+      post.mentions = resolvedMentions.map((m) => ({
+        username: m.username,
+        userId: m.userId,
+      }));
 
       // Home-timeline fan-out: top-level originals and reposts (not replies).
       if (!replyToId) {
@@ -140,6 +166,7 @@ export class PostsService {
             authorId: post.authorId,
             content: post.content,
             repostOfId: post.repostOfId,
+            authorVisibility: authorVisibility ?? 'public',
             createdAt: post.createdAt.toISOString(),
           },
         });
@@ -182,14 +209,32 @@ export class PostsService {
         });
       }
 
+      // One mention event per resolved distinct user (skip self).
+      const notified = new Set<string>();
+      for (const m of resolvedMentions) {
+        if (!m.userId || m.userId === authorId || notified.has(m.userId)) {
+          continue;
+        }
+        notified.add(m.userId);
+        await appendOutbox(client, 'post', {
+          aggregateType: 'post',
+          aggregateId: post.id,
+          eventType: 'user.mentioned',
+          partitionKey: m.userId,
+          topic: POST_TOPIC,
+          payload: {
+            postId: post.id,
+            authorId: post.authorId,
+            mentionedUserId: m.userId,
+            username: m.username,
+          },
+        });
+      }
+
       return post;
     });
   }
 
-  /**
-   * Repost of a repost collapses to the root content post.
-   * Deleted originals are rejected (nothing durable to attach to).
-   */
   private async resolveRepostTarget(
     client: PoolClient,
     repostOfId: string,
@@ -224,7 +269,145 @@ export class PostsService {
     return { id: p.id, author_id: p.author_id };
   }
 
-  async getById(postId: string): Promise<PostDto> {
+  private async persistHashtags(
+    client: PoolClient,
+    postId: string,
+    tags: { tag: string; display: string }[],
+  ): Promise<void> {
+    for (const t of tags) {
+      const existing = await client.query<{ id: string }>(
+        `SELECT id FROM post.hashtags WHERE tag = $1`,
+        [t.tag],
+      );
+      let hashtagId = existing.rows[0]?.id;
+      if (!hashtagId) {
+        hashtagId = uuidv7();
+        await client.query(
+          `INSERT INTO post.hashtags (id, tag, tag_display)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (tag) DO NOTHING`,
+          [hashtagId, t.tag, t.display],
+        );
+        const again = await client.query<{ id: string }>(
+          `SELECT id FROM post.hashtags WHERE tag = $1`,
+          [t.tag],
+        );
+        hashtagId = again.rows[0]?.id ?? hashtagId;
+      }
+      await client.query(
+        `INSERT INTO post.post_hashtags (post_id, hashtag_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [postId, hashtagId],
+      );
+    }
+  }
+
+  private async persistMentions(
+    client: PoolClient,
+    postId: string,
+    mentions: { username: string; userId: string | null }[],
+  ): Promise<void> {
+    for (const m of mentions) {
+      await client.query(
+        `INSERT INTO post.mentions (post_id, raw_username, mentioned_user_id, resolved_at)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT DO NOTHING`,
+        [postId, m.username, m.userId, m.userId ? new Date() : null],
+      );
+    }
+  }
+
+  /**
+   * Resolve usernames via identity (deadline ~300ms each, failure → unresolved).
+   */
+  private async resolveMentions(
+    usernames: string[],
+  ): Promise<{ username: string; userId: string | null }[]> {
+    const out: { username: string; userId: string | null }[] = [];
+    for (const username of usernames) {
+      try {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 300);
+        const res = await fetch(
+          `${this.identityBaseUrl}/v1/users/by-username/${encodeURIComponent(username)}`,
+          { signal: ac.signal },
+        );
+        clearTimeout(timer);
+        if (!res.ok) {
+          out.push({ username, userId: null });
+          continue;
+        }
+        const json = (await res.json()) as { user?: { id?: string } };
+        out.push({
+          username,
+          userId: typeof json.user?.id === 'string' ? json.user.id : null,
+        });
+      } catch {
+        out.push({ username, userId: null });
+      }
+    }
+    return out;
+  }
+
+  private async fetchUserVisibility(userId: string): Promise<string | null> {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 300);
+      const res = await fetch(
+        `${this.identityBaseUrl}/v1/users/${encodeURIComponent(userId)}`,
+        { signal: ac.signal },
+      );
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      const json = (await res.json()) as { user?: { visibility?: string } };
+      return json.user?.visibility ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async isFollowing(
+    followerId: string,
+    followeeId: string,
+  ): Promise<boolean> {
+    try {
+      const q = new URLSearchParams({ followerId, followeeId });
+      const res = await fetch(
+        `${this.graphBaseUrl}/v1/graph/relationship/following?${q}`,
+      );
+      if (!res.ok) return false;
+      const json = (await res.json()) as { following?: boolean };
+      return json.following === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Private (followers) authors: only self or accepted followers may read.
+   * 404 not 403 (existence is private). Fail closed when relationship unknown.
+   */
+  async assertCanViewAuthor(
+    authorId: string,
+    viewerId?: string,
+  ): Promise<void> {
+    if (viewerId && viewerId === authorId) return;
+    const visibility = await this.fetchUserVisibility(authorId);
+    // Identity down: fail open so public content still works (availability).
+    if (!visibility || visibility === 'public') return;
+    if (visibility === 'followers') {
+      if (!viewerId) {
+        throw new NotFoundException('Post not found');
+      }
+      const ok = await this.isFollowing(viewerId, authorId);
+      if (!ok) {
+        throw new NotFoundException('Post not found');
+      }
+    }
+  }
+
+  async getById(postId: string, viewerId?: string): Promise<PostDto> {
     const row = await this.pool.query(
       `SELECT ${POST_SELECT}
        FROM post.posts
@@ -233,9 +416,13 @@ export class PostsService {
     );
     const p = row.rows[0] as PostRow | undefined;
     if (!p) throw new NotFoundException('Post not found');
-    return mapPost(p);
+    await this.assertCanViewAuthor(p.author_id, viewerId);
+    const post = mapPost(p);
+    post.mentions = await this.loadMentions(postId);
+    return post;
   }
 
+  /** Internal hydrate — no visibility check (caller already authorized). */
   async getByIds(ids: string[]): Promise<PostDto[]> {
     if (ids.length === 0) return [];
     const rows = await this.pool.query(
@@ -250,7 +437,12 @@ export class PostsService {
     return ids.map((id) => byId.get(id)).filter((p): p is PostDto => !!p);
   }
 
-  async listByAuthor(authorId: string, limit = 20): Promise<PostDto[]> {
+  async listByAuthor(
+    authorId: string,
+    limit = 20,
+    viewerId?: string,
+  ): Promise<PostDto[]> {
+    await this.assertCanViewAuthor(authorId, viewerId);
     const safeLimit = Math.min(Math.max(limit, 1), 100);
     const rows = await this.pool.query(
       `SELECT ${POST_SELECT}
@@ -263,8 +455,19 @@ export class PostsService {
     return (rows.rows as PostRow[]).map(mapPost);
   }
 
-  /** Direct replies to a post (one level). */
-  async listReplies(parentId: string, limit = 50): Promise<PostDto[]> {
+  async listReplies(
+    parentId: string,
+    limit = 50,
+    viewerId?: string,
+  ): Promise<PostDto[]> {
+    const parent = await this.pool.query<{ author_id: string }>(
+      `SELECT author_id FROM post.posts WHERE id = $1 AND deleted_at IS NULL`,
+      [parentId],
+    );
+    const p = parent.rows[0];
+    if (!p) throw new NotFoundException('Post not found');
+    await this.assertCanViewAuthor(p.author_id, viewerId);
+
     const safeLimit = Math.min(Math.max(limit, 1), 200);
     const rows = await this.pool.query(
       `SELECT ${POST_SELECT}
@@ -277,23 +480,24 @@ export class PostsService {
     return (rows.rows as PostRow[]).map(mapPost);
   }
 
-  /**
-   * Thread page: root (if live) + posts with thread_root_id = root, ordered by id.
-   * `rootId` may be the root or any reply in the thread.
-   */
   async getThread(
     rootOrPostId: string,
     limit = 50,
+    viewerId?: string,
   ): Promise<{ root: PostDto | null; posts: PostDto[] }> {
     const anchor = await this.pool.query<{
       id: string;
+      author_id: string;
       thread_root_id: string | null;
       deleted_at: Date | null;
-    }>(`SELECT id, thread_root_id, deleted_at FROM post.posts WHERE id = $1`, [
-      rootOrPostId,
-    ]);
+    }>(
+      `SELECT id, author_id, thread_root_id, deleted_at FROM post.posts WHERE id = $1`,
+      [rootOrPostId],
+    );
     const a = anchor.rows[0];
     if (!a) throw new NotFoundException('Post not found');
+    await this.assertCanViewAuthor(a.author_id, viewerId);
+
     const rootId = a.thread_root_id ?? a.id;
     const safeLimit = Math.min(Math.max(limit, 1), 200);
 
@@ -317,6 +521,21 @@ export class PostsService {
       root,
       posts: (rows.rows as PostRow[]).map(mapPost),
     };
+  }
+
+  private async loadMentions(postId: string): Promise<MentionDto[]> {
+    const rows = await this.pool.query<{
+      raw_username: string;
+      mentioned_user_id: string | null;
+    }>(
+      `SELECT raw_username, mentioned_user_id FROM post.mentions
+       WHERE post_id = $1 ORDER BY raw_username`,
+      [postId],
+    );
+    return rows.rows.map((r) => ({
+      username: r.raw_username,
+      userId: r.mentioned_user_id,
+    }));
   }
 
   async softDelete(postId: string, userId: string): Promise<void> {
@@ -375,6 +594,15 @@ export class PostsService {
   }
 
   async like(postId: string, userId: string): Promise<PostDto> {
+    const peek = await this.pool.query<{ author_id: string }>(
+      `SELECT author_id FROM post.posts WHERE id = $1 AND deleted_at IS NULL`,
+      [postId],
+    );
+    if ((peek.rowCount ?? 0) === 0) {
+      throw new NotFoundException('Post not found');
+    }
+    await this.assertCanViewAuthor(peek.rows[0]!.author_id, userId);
+
     return withTransaction(this.pool, async (client) => {
       const post = await client.query<{ id: string; author_id: string }>(
         `SELECT id, author_id FROM post.posts

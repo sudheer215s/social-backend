@@ -21,12 +21,12 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Area          | Capabilities                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
-| Posts         | Create/list/delete, **replies + threads**, **reposts/quotes**, likes, outbox events, soft-delete cascade on user erase               |
+| Posts         | Create/list/delete, replies/threads, reposts/quotes, **@mentions + #hashtags**, likes, private-author read authz                     |
 | Graph         | Follow/unfollow, **follow requests** (private accounts), blocks, mutes, cascade jobs on erase                                        |
 | Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter at hydration                                                |
 | Notifications | Follow/like/follow_request aggregation, Redis stream pointers, block/mute suppress                                                   |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
-| Search        | ES post/user index + query API                                                                                                       |
+| Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
 | Edge          | API gateway (JWT, rate limit, sid revocation), route inventory, smoke e2e                                                            |
 
 ### Explicit non-goals (v2 design)
@@ -35,7 +35,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Private-content **timeline authz** for non-followers is partial; @mentions product flow; search post-filter authz; full HTTP RED metrics; production secret store / image digests wired for real clusters.
+Mention repair worker for unresolved @handles; full HTTP RED metrics; production secret store / image digests wired for real clusters; grapheme-accurate post length.
 
 ---
 
@@ -166,6 +166,12 @@ GET  /v1/posts/:id/thread
 - Replies set `threadRootId` (denormalised); emit `post.replied` (notification type `reply`). They do **not** fan out to home timelines.
 - Pure/quote reposts emit `post.created` (timeline + search) and `post.reposted` (notification type `repost`).
 - Repost-of-repost collapses to the original content post. One pure repost per author per original (`409` if duplicated).
+
+### Mentions, hashtags, private content
+
+- `@username` (max 10) resolved via identity (300ms, failure → store unresolved). Emits `user.mentioned` → notif `mention`.
+- `#hashtag` (max 10) stored normalised; search indexes hashtags from content.
+- Authors with `visibility=followers`: anonymous `GET` post/profile feed returns **404**; followers (JWT) may read. Search never indexes their posts (`author_visibility=public` filter + skip on index).
 
 ---
 

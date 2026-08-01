@@ -291,6 +291,20 @@ function mapEvent(
       groupKey: `repost:${originalPostId}`,
     };
   }
+  if (eventType === 'user.mentioned') {
+    const postId = asString(payload.postId);
+    const authorId = asString(payload.authorId);
+    const mentionedUserId = asString(payload.mentionedUserId);
+    if (!postId || !authorId || !mentionedUserId) return null;
+    return {
+      type: 'mention',
+      recipientId: mentionedUserId,
+      actorId: authorId,
+      entityType: 'post',
+      entityId: postId,
+      groupKey: `mention:${postId}`,
+    };
+  }
   return null;
 }
 
