@@ -93,6 +93,28 @@ export class ContentController {
     );
   }
 
+  @Get('v1/posts/:id/replies')
+  listReplies(@Param('id') id: string, @Query('limit') limit?: string) {
+    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    return this.forward(
+      'POST_BASE_URL',
+      'http://127.0.0.1:3002',
+      'GET',
+      `/v1/posts/${id}/replies${q}`,
+    );
+  }
+
+  @Get('v1/posts/:id/thread')
+  getThread(@Param('id') id: string, @Query('limit') limit?: string) {
+    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    return this.forward(
+      'POST_BASE_URL',
+      'http://127.0.0.1:3002',
+      'GET',
+      `/v1/posts/${id}/thread${q}`,
+    );
+  }
+
   @Get('v1/posts/:id')
   getPost(@Param('id') id: string) {
     return this.forward(

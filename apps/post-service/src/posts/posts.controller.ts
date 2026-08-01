@@ -40,6 +40,17 @@ export class PostsController {
     return { posts };
   }
 
+  @Get(':id/replies')
+  async replies(@Param('id') id: string, @Query('limit') limit?: string) {
+    const posts = await this.posts.listReplies(id, limit ? Number(limit) : 50);
+    return { posts };
+  }
+
+  @Get(':id/thread')
+  async thread(@Param('id') id: string, @Query('limit') limit?: string) {
+    return this.posts.getThread(id, limit ? Number(limit) : 50);
+  }
+
   @Get(':id')
   async get(@Param('id') id: string) {
     const post = await this.posts.getById(id);

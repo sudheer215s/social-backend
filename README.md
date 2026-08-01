@@ -21,7 +21,7 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Area          | Capabilities                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
-| Posts         | Create/list/delete, likes, outbox events, soft-delete cascade on user erase                                                          |
+| Posts         | Create/list/delete, **replies + threads**, **reposts/quotes**, likes, outbox events, soft-delete cascade on user erase               |
 | Graph         | Follow/unfollow, **follow requests** (private accounts), blocks, mutes, cascade jobs on erase                                        |
 | Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter at hydration                                                |
 | Notifications | Follow/like/follow_request aggregation, Redis stream pointers, block/mute suppress                                                   |
@@ -35,7 +35,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Private-content **timeline authz** for non-followers is partial; replies/reposts/mentions product flows; search post-filter authz; full HTTP RED metrics; production secret store / image digests wired for real clusters.
+Private-content **timeline authz** for non-followers is partial; @mentions product flow; search post-filter authz; full HTTP RED metrics; production secret store / image digests wired for real clusters.
 
 ---
 
@@ -149,6 +149,23 @@ PATCH /v1/users/me  { "visibility": "followers" }
 ```
 
 Accept emits `user.followed` in the same transaction. Reject is silent. Blocks clear follows **and** pending requests both ways.
+
+---
+
+## Replies & reposts
+
+```http
+POST /v1/posts  { "content": "hello" }
+POST /v1/posts  { "content": "reply", "replyToId": "<postId>" }
+POST /v1/posts  { "repostOfId": "<postId>" }                    # pure repost
+POST /v1/posts  { "content": "quote", "repostOfId": "<postId>" } # quote
+GET  /v1/posts/:id/replies
+GET  /v1/posts/:id/thread
+```
+
+- Replies set `threadRootId` (denormalised); emit `post.replied` (notification type `reply`). They do **not** fan out to home timelines.
+- Pure/quote reposts emit `post.created` (timeline + search) and `post.reposted` (notification type `repost`).
+- Repost-of-repost collapses to the original content post. One pure repost per author per original (`409` if duplicated).
 
 ---
 

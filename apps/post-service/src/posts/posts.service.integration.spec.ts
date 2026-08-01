@@ -66,4 +66,66 @@ describe('PostsService (integration)', () => {
     );
     expect(Number(delOutbox.rows[0]?.c ?? 0)).toBe(1);
   });
+
+  it('replies, threads, and reposts', async () => {
+    if (!available) return;
+    const root = await posts.create(authorId, { content: 'root post' });
+    const reply = await posts.create(otherId, {
+      content: 'a reply',
+      replyToId: root.id,
+    });
+    expect(reply.replyToId).toBe(root.id);
+    expect(reply.threadRootId).toBe(root.id);
+
+    const nested = await posts.create(authorId, {
+      content: 'nested',
+      replyToId: reply.id,
+    });
+    expect(nested.threadRootId).toBe(root.id);
+
+    const parent = await posts.getById(root.id);
+    expect(parent.replyCount).toBe(1);
+
+    const replies = await posts.listReplies(root.id);
+    expect(replies.some((p) => p.id === reply.id)).toBe(true);
+
+    const thread = await posts.getThread(nested.id);
+    expect(thread.root?.id).toBe(root.id);
+    expect(thread.posts.some((p) => p.id === nested.id)).toBe(true);
+
+    const replyEvents = await pool.query(
+      `SELECT event_type FROM post.outbox
+       WHERE aggregate_id = $1 AND event_type = 'post.replied'`,
+      [reply.id],
+    );
+    expect(replyEvents.rowCount ?? 0).toBeGreaterThanOrEqual(1);
+
+    const pure = await posts.create(otherId, { repostOfId: root.id });
+    expect(pure.repostOfId).toBe(root.id);
+    expect(pure.content).toBe('');
+    const afterRepost = await posts.getById(root.id);
+    expect(afterRepost.repostCount).toBe(1);
+
+    await expect(
+      posts.create(otherId, { repostOfId: root.id }),
+    ).rejects.toBeTruthy();
+
+    const quote = await posts.create(otherId, {
+      content: 'quote take',
+      repostOfId: root.id,
+    });
+    expect(quote.content).toBe('quote take');
+    expect(quote.repostOfId).toBe(root.id);
+
+    // Repost-of-repost collapses to original
+    const chained = await posts.create(authorId, { repostOfId: pure.id });
+    expect(chained.repostOfId).toBe(root.id);
+
+    const repostEvents = await pool.query(
+      `SELECT event_type FROM post.outbox
+       WHERE aggregate_id = $1 AND event_type = 'post.reposted'`,
+      [pure.id],
+    );
+    expect(repostEvents.rowCount ?? 0).toBeGreaterThanOrEqual(1);
+  });
 });

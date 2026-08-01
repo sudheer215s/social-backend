@@ -259,6 +259,38 @@ function mapEvent(
       groupKey: `like:${postId}`,
     };
   }
+  if (eventType === 'post.replied') {
+    const postId = asString(payload.postId);
+    const authorId = asString(payload.authorId);
+    const parentPostId = asString(payload.parentPostId);
+    const parentAuthorId = asString(payload.parentAuthorId);
+    if (!postId || !authorId || !parentPostId || !parentAuthorId) return null;
+    return {
+      type: 'reply',
+      recipientId: parentAuthorId,
+      actorId: authorId,
+      entityType: 'post',
+      entityId: parentPostId,
+      groupKey: `reply:${parentPostId}`,
+    };
+  }
+  if (eventType === 'post.reposted') {
+    const postId = asString(payload.postId);
+    const authorId = asString(payload.authorId);
+    const originalPostId = asString(payload.originalPostId);
+    const originalAuthorId = asString(payload.originalAuthorId);
+    if (!postId || !authorId || !originalPostId || !originalAuthorId) {
+      return null;
+    }
+    return {
+      type: 'repost',
+      recipientId: originalAuthorId,
+      actorId: authorId,
+      entityType: 'post',
+      entityId: originalPostId,
+      groupKey: `repost:${originalPostId}`,
+    };
+  }
   return null;
 }
 
