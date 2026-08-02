@@ -16,8 +16,9 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+/** Body refreshToken is optional when the `rt` httpOnly cookie is present. */
 export const refreshSchema = z.object({
-  refreshToken: z.string().min(20).max(512),
+  refreshToken: z.string().min(20).max(512).optional(),
 });
 
 export const verifyEmailSchema = z.object({

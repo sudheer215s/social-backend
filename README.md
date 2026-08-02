@@ -28,7 +28,7 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
 | Observability | **HTTP RED** (`http_requests_total`, `http_request_duration_seconds`, `http_request_errors_total`) on all HTTP apps                  |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
-| Edge          | API gateway (JWT, rate limit, sid revocation), route inventory, smoke e2e                                                            |
+| Edge          | API gateway (JWT, **trusted XFF rate limits**, **httpOnly `rt` refresh cookie**, sid revocation), smoke e2e                          |
 
 ### Explicit non-goals (v2 design)
 
@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Production secret store / image digests wired for real clusters; mention-repair depends on identity being up (no multi-tenant job leader yet).
+Production secret store / image digests wired for real clusters (ESO + digest overlays exist as examples).
 
 ---
 
@@ -186,6 +186,18 @@ Every HTTP service exposes `GET /metrics` (Prometheus text):
 | `http_request_duration_seconds{method,route,status_class}` | Duration histogram |
 
 Routes are cardinality-limited (UUIDs → `:id`). Health and `/metrics` itself are not counted.
+
+### Auth cookies & rate limits (browser)
+
+```http
+POST /v1/auth/login     → Set-Cookie: rt=<refresh>; HttpOnly; Secure; SameSite=Strict; Path=/v1/auth
+POST /v1/auth/refresh   → cookie `rt` and/or body { "refreshToken" }; rotates cookie
+POST /v1/auth/logout    → clears `rt`
+```
+
+- **Trusted client IP:** set `TRUSTED_PROXIES` (CIDRs/IPs of ingress/SSR). Only then is `X-Forwarded-For` used for rate-limit keys. Blind spoofing from the public internet is ignored.
+- **Anonymous limit:** 100 req/hour/IP (`ANON_RATE_LIMIT`) on unauthenticated traffic; Bearer requests skip this bucket.
+- **mention-repair** uses a Postgres advisory lock so only one replica runs each cycle.
 
 ---
 

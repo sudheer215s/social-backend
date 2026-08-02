@@ -1,12 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Pool } from 'pg';
-import { withTransaction } from '@social/platform-db';
+import {
+  advisoryLockKey,
+  withAdvisoryLeaderLock,
+  withTransaction,
+} from '@social/platform-db';
 import { appendOutbox } from '@social/platform-events';
 import { POST_TOPIC } from '../posts/posts.service';
 
+const LOCK_KEY = advisoryLockKey('post:mention-repair');
+
 /**
  * Resolves mentions left unresolved when identity was down at write time.
- * Design: run about every 15 minutes; safe to call more often.
+ * Design: run about every 15 minutes; multi-replica safe via advisory lock.
  */
 @Injectable()
 export class MentionRepairService {
@@ -18,7 +24,25 @@ export class MentionRepairService {
       process.env.IDENTITY_BASE_URL ?? 'http://127.0.0.1:3001';
   }
 
-  async repairBatch(limit = 100): Promise<{ scanned: number; resolved: number }> {
+  /**
+   * Leader-only batch. Non-leaders return scanned=0 without work.
+   */
+  async repairBatch(
+    limit = 100,
+  ): Promise<{ scanned: number; resolved: number; leader: boolean }> {
+    let result = { scanned: 0, resolved: 0, leader: false };
+    const led = await withAdvisoryLeaderLock(this.pool, LOCK_KEY, async () => {
+      result = { ...(await this.repairBatchUnlocked(limit)), leader: true };
+    });
+    if (!led) {
+      return { scanned: 0, resolved: 0, leader: false };
+    }
+    return result;
+  }
+
+  private async repairBatchUnlocked(
+    limit: number,
+  ): Promise<{ scanned: number; resolved: number }> {
     const rows = await this.pool.query<{
       post_id: string;
       raw_username: string;

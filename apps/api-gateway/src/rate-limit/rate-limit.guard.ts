@@ -9,10 +9,11 @@ import {
 import type { Request, Response } from 'express';
 import type { RateLimiter } from '@social/platform-redis';
 import { RATE_LIMITER } from '../tokens';
+import { resolveClientIp } from './client-ip';
 
 /**
  * Fixed-window rate limit for sensitive auth routes.
- * Keyed by client IP + route path.
+ * Keyed by *trusted* client IP + route path (see resolveClientIp / F3).
  */
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -27,19 +28,14 @@ export class RateLimitGuard implements CanActivate {
     const resolvedLimit = Number.isFinite(limit) ? limit : 30;
     const resolvedWindow = Number.isFinite(windowSeconds) ? windowSeconds : 60;
 
-    const ip =
-      (typeof req.headers['x-forwarded-for'] === 'string'
-        ? req.headers['x-forwarded-for'].split(',')[0]?.trim()
-        : undefined) ||
-      req.ip ||
-      req.socket.remoteAddress ||
-      'unknown';
-    const key = `${ip}:${req.method}:${req.path}`;
+    const ip = resolveClientIp(req);
+    const key = `auth:${ip}:${req.method}:${req.path}`;
     const result = await this.limiter.check(key, resolvedLimit, resolvedWindow);
     res.setHeader('X-RateLimit-Limit', String(result.limit));
     res.setHeader('X-RateLimit-Remaining', String(result.remaining));
     res.setHeader('X-RateLimit-Reset', String(result.resetSeconds));
     if (!result.allowed) {
+      res.setHeader('Retry-After', String(result.resetSeconds));
       throw new HttpException(
         {
           type: 'about:blank',

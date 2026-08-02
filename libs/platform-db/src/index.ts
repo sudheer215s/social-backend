@@ -17,4 +17,5 @@ export {
   type TxClient,
   type TransactionOptions,
 } from './transaction';
+export { withAdvisoryLeaderLock, advisoryLockKey } from './advisory-lock';
 export { createDb, type Db } from './drizzle';

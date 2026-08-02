@@ -9,13 +9,22 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import type { AuthedRequest } from './auth.guard';
 import { AuthGuard } from './auth.guard';
 import { IdentityGrpcClient } from '../proxy/identity.grpc.client';
 import { IdentityProxy } from '../proxy/identity.proxy';
 import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
+import {
+  clearRefreshCookie,
+  extractRefreshTokenFromBody,
+  getRefreshCookie,
+  setRefreshCookie,
+  tokensFromJson,
+} from './refresh-cookie';
 
 @Controller()
 export class AuthController {
@@ -44,27 +53,83 @@ export class AuthController {
     return typeof h === 'string' ? h : undefined;
   }
 
+  private maybeSetRefreshCookie(res: Response, json: unknown): void {
+    const tokens = tokensFromJson(json);
+    if (tokens?.refreshToken) {
+      setRefreshCookie(res, tokens.refreshToken);
+    }
+  }
+
   @Post('v1/auth/register')
   @UseGuards(RateLimitGuard)
-  register(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/register', { body });
+  async register(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const json = await this.forward('POST', '/v1/auth/register', { body });
+    this.maybeSetRefreshCookie(res, json);
+    return json;
   }
 
   @Post('v1/auth/login')
   @UseGuards(RateLimitGuard)
-  login(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/login', { body });
+  async login(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const json = await this.forward('POST', '/v1/auth/login', { body });
+    this.maybeSetRefreshCookie(res, json);
+    return json;
   }
 
   @Post('v1/auth/refresh')
   @UseGuards(RateLimitGuard)
-  refresh(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/refresh', { body });
+  async refresh(
+    @Req() req: Request,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const fromBody = extractRefreshTokenFromBody(body);
+    const fromCookie = getRefreshCookie(req);
+    const refreshToken = fromBody ?? fromCookie;
+    if (!refreshToken) {
+      throw new HttpException(
+        {
+          type: 'about:blank',
+          title: 'Bad Request',
+          status: 400,
+          detail: 'refreshToken required in body or rt cookie',
+        },
+        400,
+      );
+    }
+    const json = await this.forward('POST', '/v1/auth/refresh', {
+      body: { refreshToken },
+    });
+    this.maybeSetRefreshCookie(res, json);
+    return json;
   }
 
   @Post('v1/auth/logout')
-  logout(@Body() body: unknown) {
-    return this.forward('POST', '/v1/auth/logout', { body });
+  @HttpCode(204)
+  async logout(
+    @Req() req: Request,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const fromBody = extractRefreshTokenFromBody(body);
+    const fromCookie = getRefreshCookie(req);
+    const refreshToken = fromBody ?? fromCookie;
+    if (refreshToken) {
+      try {
+        await this.forward('POST', '/v1/auth/logout', {
+          body: { refreshToken },
+        });
+      } catch {
+        // Still clear cookie even if token already invalid
+      }
+    }
+    clearRefreshCookie(res);
   }
 
   @Post('v1/auth/verify-email')
