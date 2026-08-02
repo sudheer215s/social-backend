@@ -3,6 +3,7 @@ import type { RedisClient } from '@social/platform-redis';
 import {
   createLogger,
   httpMetricsMiddleware,
+  requestContextMiddleware,
 } from '@social/platform-telemetry';
 import { AppModule, REDIS } from './app.module';
 import { attachRealtimeWebSocket } from './realtime/ws.gateway';
@@ -16,6 +17,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+  app.use(requestContextMiddleware());
   app.use(httpMetricsMiddleware());
   const port = process.env.PORT ?? '3007';
   await app.listen(port);

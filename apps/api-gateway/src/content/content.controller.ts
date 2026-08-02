@@ -20,10 +20,11 @@ import {
   hashRequestBody,
   type IdempotencyStore,
 } from '@social/platform-redis';
+import { outboundRequestHeaders } from '@social/platform-telemetry';
 import type { AuthedRequest } from '../auth/auth.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { EmailVerifiedGuard } from '../auth/email-verified.guard';
-import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
+import { TicketRateLimitGuard } from '../rate-limit/ticket-rate-limit.guard';
 import { IDEMPOTENCY_STORE } from '../tokens';
 
 /**
@@ -45,7 +46,7 @@ export class ContentController {
     options?: { body?: unknown; authorization?: string },
   ): Promise<unknown> {
     const base = process.env[baseEnv] ?? fallback;
-    const headers: Record<string, string> = { accept: 'application/json' };
+    const headers = outboundRequestHeaders({ accept: 'application/json' });
     if (options?.body !== undefined) {
       headers['content-type'] = 'application/json';
     }
@@ -203,9 +204,11 @@ export class ContentController {
     @Req() req: AuthedRequest,
     @Query('authorId') authorId: string,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
     const q = new URLSearchParams({ authorId });
     if (limit) q.set('limit', limit);
+    if (cursor) q.set('cursor', cursor);
     const authorization = this.bearer(req);
     return this.forward(
       'POST_BASE_URL',
@@ -380,24 +383,38 @@ export class ContentController {
   }
 
   @Get('v1/graph/following/:userId')
-  following(@Param('userId') userId: string, @Query('limit') limit?: string) {
-    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+  following(
+    @Param('userId') userId: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const q = new URLSearchParams();
+    if (limit) q.set('limit', limit);
+    if (cursor) q.set('cursor', cursor);
+    const qs = q.toString() ? `?${q}` : '';
     return this.forward(
       'GRAPH_BASE_URL',
       'http://127.0.0.1:3003',
       'GET',
-      `/v1/graph/following/${userId}${q}`,
+      `/v1/graph/following/${userId}${qs}`,
     );
   }
 
   @Get('v1/graph/followers/:userId')
-  followers(@Param('userId') userId: string, @Query('limit') limit?: string) {
-    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+  followers(
+    @Param('userId') userId: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const q = new URLSearchParams();
+    if (limit) q.set('limit', limit);
+    if (cursor) q.set('cursor', cursor);
+    const qs = q.toString() ? `?${q}` : '';
     return this.forward(
       'GRAPH_BASE_URL',
       'http://127.0.0.1:3003',
       'GET',
-      `/v1/graph/followers/${userId}${q}`,
+      `/v1/graph/followers/${userId}${qs}`,
     );
   }
 
@@ -542,7 +559,7 @@ export class ContentController {
 
   /** Short-lived ticket for SSE on realtime-gateway (not JWT-in-query). */
   @Post('v1/realtime/ticket')
-  @UseGuards(AuthGuard, RateLimitGuard)
+  @UseGuards(AuthGuard, TicketRateLimitGuard)
   realtimeTicket(@Req() req: AuthedRequest) {
     const authorization = this.bearer(req);
     return this.forward(

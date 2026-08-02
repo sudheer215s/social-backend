@@ -87,7 +87,7 @@ Design documentation for the social backend. Written as a review-then-redesign p
 > **Frontend review backend requests — shipped:**
 > **F3** — rate-limit IP derivation honours `X-Forwarded-For` / `X-Real-IP` only from `TRUSTED_PROXIES` (or loopback in non-prod); anonymous 100/hour bucket uses that IP.
 > **F1** — login/register/refresh set httpOnly `rt` cookie (`Path=/v1/auth`); refresh/logout accept cookie or body.
-> **F2** — `POST /v1/realtime/ticket` rate-limited.
+> **F2** — `POST /v1/realtime/ticket` rate-limited (~20/min per user).
 > **F10** — write routes return `403` with `type` `…/email-not-verified` when enforced (`ENFORCE_EMAIL_VERIFIED` / production).
 
 ---

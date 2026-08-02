@@ -35,9 +35,9 @@ describe('GraphService (integration)', () => {
     const r = await graph.follow(a, b);
     expect(r.state).toBe('following');
     await expect(graph.isFollowing(a, b)).resolves.toBe(true);
-    const following = await graph.listFollowing(a);
+    const following = (await graph.listFollowing(a)).items;
     expect(following.some((x) => x.userId === b)).toBe(true);
-    const followers = await graph.listFollowers(b);
+    const followers = (await graph.listFollowers(b)).items;
     expect(followers.some((x) => x.userId === a)).toBe(true);
 
     await graph.block(b, a);
@@ -50,9 +50,11 @@ describe('GraphService (integration)', () => {
          AND payload->>'blockerId' = $1`,
       [b],
     );
-    expect(blockEvents.rows.some((r) => r.event_type === 'user.blocked')).toBe(
-      true,
-    );
+    expect(
+      (blockEvents.rows as { event_type: string }[]).some(
+        (r) => r.event_type === 'user.blocked',
+      ),
+    ).toBe(true);
 
     await graph.unmute(b, a); // no-op if not muted
     await graph.mute(b, a);

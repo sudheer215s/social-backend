@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import {
   createLogger,
   httpMetricsMiddleware,
+  requestContextMiddleware,
 } from '@social/platform-telemetry';
 import {
   createRedisClient,
@@ -23,6 +24,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+  // Correlation first so metrics/rate-limit see the same request id context.
+  app.use(requestContextMiddleware());
   app.use(httpMetricsMiddleware());
 
   // Anonymous IP rate limit (trusted XFF only) — fail-open if Redis down.

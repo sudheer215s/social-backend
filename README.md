@@ -21,12 +21,12 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Area          | Capabilities                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
-| Posts         | Create/list/delete, replies/threads, reposts/quotes, **@mentions + #hashtags**, likes, private-author read authz                     |
-| Graph         | Follow/unfollow, **follow requests** (private accounts), blocks, mutes, cascade jobs on erase                                        |
+| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, private authz, **cursor author feed**                 |
+| Graph         | Follow/unfollow, follow requests, blocks, mutes, **cursor pagination** on follower lists, cascade on erase                           |
 | Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter at hydration                                                |
 | Notifications | Follow/like/follow_request aggregation, Redis stream pointers, block/mute suppress                                                   |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
-| Observability | **HTTP RED** (`http_requests_total`, `http_request_duration_seconds`, `http_request_errors_total`) on all HTTP apps                  |
+| Observability | HTTP RED metrics; **X-Request-Id** + optional `traceparent` propagation                                                              |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
 | Edge          | API gateway (JWT + **email_verified claim**, trusted XFF, httpOnly `rt`, Idempotency-Key, ticket RL), smoke e2e                      |
 
@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Wire `TRUSTED_PROXIES` and real registry digests per environment when deploying.
+Wire `TRUSTED_PROXIES` and real registry digests per environment when deploying. Cursor pagination not yet on every collection (timeline, notifications).
 
 ---
 
@@ -208,6 +208,23 @@ Idempotency-Key: <client-generated unique key>
 ```
 
 Retries with the same key + body return the original response (`Idempotent-Replay: true`). Same key + different body → `422`. Concurrent in-flight → `409`. Server 5xx drops the key so a genuine retry can proceed. Stored in Redis (24h). Set `IDEMPOTENCY_OPTIONAL=1` only for local break-glass.
+
+### Request correlation & pagination
+
+```http
+X-Request-Id: <echoed or generated>
+traceparent: 00-<traceid>-<spanid>-<flags>   # accepted & forwarded when valid
+```
+
+Gateway propagates these headers to upstream services. Logs can join on `X-Request-Id`.
+
+```http
+GET /v1/posts?authorId=…&limit=20&cursor=…
+GET /v1/graph/followers/:userId?limit=50&cursor=…
+→ { "posts"|"items": […], "page": { "next_cursor": "…"|null, "has_more": true|false } }
+```
+
+Realtime tickets: **20/min per user** (`TICKET_RATE_LIMIT` / `TICKET_RATE_WINDOW_SEC`).
 
 ### Email verification (write path)
 

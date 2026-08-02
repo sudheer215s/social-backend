@@ -4,7 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Pool, PoolClient } from 'pg';
-import { withTransaction } from '@social/platform-db';
+import {
+  decodeCursor,
+  paginateRows,
+  type PageMeta,
+  withTransaction,
+} from '@social/platform-db';
 import { appendOutbox } from '@social/platform-events';
 
 export const GRAPH_TOPIC = 'social.graph.v1';
@@ -251,41 +256,75 @@ export class GraphService {
   async listFollowing(
     userId: string,
     limit = 50,
-  ): Promise<{ userId: string; createdAt: Date }[]> {
-    const rows = await this.pool.query<{
-      followee_id: string;
-      created_at: Date;
-    }>(
-      `SELECT followee_id, created_at FROM graph.follows
-       WHERE follower_id = $1
-       ORDER BY created_at DESC, followee_id
-       LIMIT $2`,
-      [userId, Math.min(Math.max(limit, 1), 100)],
-    );
-    return rows.rows.map((r) => ({
-      userId: r.followee_id,
-      createdAt: r.created_at,
-    }));
+    cursor?: string,
+  ): Promise<{
+    items: { userId: string; createdAt: Date }[];
+    page: PageMeta;
+  }> {
+    return this.listEdges('following', userId, limit, cursor);
   }
 
   async listFollowers(
     userId: string,
     limit = 50,
-  ): Promise<{ userId: string; createdAt: Date }[]> {
+    cursor?: string,
+  ): Promise<{
+    items: { userId: string; createdAt: Date }[];
+    page: PageMeta;
+  }> {
+    return this.listEdges('followers', userId, limit, cursor);
+  }
+
+  private async listEdges(
+    kind: 'following' | 'followers',
+    userId: string,
+    limit: number,
+    cursor?: string,
+  ): Promise<{
+    items: { userId: string; createdAt: Date }[];
+    page: PageMeta;
+  }> {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    let beforeCreatedAt: string | null = null;
+    let beforeUserId: string | null = null;
+    if (cursor) {
+      try {
+        const c = decodeCursor<{ createdAt?: string; userId?: string }>(cursor);
+        beforeCreatedAt = typeof c.createdAt === 'string' ? c.createdAt : null;
+        beforeUserId = typeof c.userId === 'string' ? c.userId : null;
+        if (!beforeCreatedAt || !beforeUserId) {
+          throw new Error('invalid_cursor');
+        }
+      } catch {
+        throw new BadRequestException('Invalid cursor');
+      }
+    }
+
+    const otherCol = kind === 'following' ? 'followee_id' : 'follower_id';
+    const selfCol = kind === 'following' ? 'follower_id' : 'followee_id';
     const rows = await this.pool.query<{
-      follower_id: string;
+      other_id: string;
       created_at: Date;
     }>(
-      `SELECT follower_id, created_at FROM graph.follows
-       WHERE followee_id = $1
-       ORDER BY created_at DESC, follower_id
-       LIMIT $2`,
-      [userId, Math.min(Math.max(limit, 1), 100)],
+      `SELECT ${otherCol} AS other_id, created_at FROM graph.follows
+       WHERE ${selfCol} = $1
+         AND (
+           $2::timestamptz IS NULL
+           OR (created_at, ${otherCol}) < ($2::timestamptz, $3::uuid)
+         )
+       ORDER BY created_at DESC, ${otherCol} DESC
+       LIMIT $4`,
+      [userId, beforeCreatedAt, beforeUserId, safeLimit + 1],
     );
-    return rows.rows.map((r) => ({
-      userId: r.follower_id,
+    const mapped = rows.rows.map((r) => ({
+      userId: r.other_id,
       createdAt: r.created_at,
     }));
+    const { items, page } = paginateRows(mapped, safeLimit, (i) => ({
+      userId: i.userId,
+      createdAt: i.createdAt.toISOString(),
+    }));
+    return { items, page };
   }
 
   /** For fan-out: page follower IDs. */

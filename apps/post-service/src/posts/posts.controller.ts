@@ -79,13 +79,14 @@ export class PostsController {
     @Req() req: AuthedRequest,
     @Query('authorId') authorId: string,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
-    const posts = await this.posts.listByAuthor(
+    return this.posts.listByAuthor(
       authorId,
       limit ? Number(limit) : 20,
       req.userId,
+      cursor,
     );
-    return { posts };
   }
 
   @Delete(':id')

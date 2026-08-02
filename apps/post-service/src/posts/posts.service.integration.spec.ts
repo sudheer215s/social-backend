@@ -38,7 +38,8 @@ describe('PostsService (integration)', () => {
     expect(created.likeCount).toBe(0);
 
     const listed = await posts.listByAuthor(authorId);
-    expect(listed.some((p) => p.id === created.id)).toBe(true);
+    expect(listed.posts.some((p) => p.id === created.id)).toBe(true);
+    expect(listed.page.has_more).toBe(false);
 
     const liked = await posts.like(created.id, otherId);
     expect(liked.likeCount).toBe(1);
@@ -134,7 +135,10 @@ describe('PostsService (integration)', () => {
     const created = await posts.create(authorId, {
       content: 'hey @nobody_xyz_abc #CoolTag and #cooltag',
     });
-    const mentions = await pool.query(
+    const mentions = await pool.query<{
+      raw_username: string;
+      mentioned_user_id: string | null;
+    }>(
       `SELECT raw_username, mentioned_user_id FROM post.mentions WHERE post_id = $1`,
       [created.id],
     );

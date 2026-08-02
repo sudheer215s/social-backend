@@ -24,6 +24,7 @@ import { MetricsController } from './metrics.controller';
 import { IdentityGrpcClient } from './proxy/identity.grpc.client';
 import { IdentityProxy } from './proxy/identity.proxy';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
+import { TicketRateLimitGuard } from './rate-limit/ticket-rate-limit.guard';
 import {
   IDEMPOTENCY_STORE,
   RATE_LIMITER,
@@ -139,6 +140,7 @@ import {
         new AuthGuard(verifier, revocation),
     },
     RateLimitGuard,
+    TicketRateLimitGuard,
     EmailVerifiedGuard,
   ],
 })

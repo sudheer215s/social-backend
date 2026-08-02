@@ -33,3 +33,12 @@ export {
   type Labels,
 } from './metrics';
 export { httpMetricsMiddleware } from './http-metrics';
+export {
+  getRequestContext,
+  outboundRequestHeaders,
+  parseTraceparent,
+  requestContextMiddleware,
+  runWithRequestContext,
+  sanitizeRequestId,
+  type RequestContext,
+} from './request-context';

@@ -8,6 +8,7 @@ import {
 import {
   createLogger,
   httpMetricsMiddleware,
+  requestContextMiddleware,
 } from '@social/platform-telemetry';
 import path from 'node:path';
 import { AppModule } from './app.module';
@@ -34,6 +35,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+  app.use(requestContextMiddleware());
   app.use(httpMetricsMiddleware());
 
   const grpcUrl = process.env.IDENTITY_GRPC_URL ?? '0.0.0.0:50051';

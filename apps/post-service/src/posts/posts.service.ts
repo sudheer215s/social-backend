@@ -1,11 +1,18 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import type { Pool, PoolClient } from 'pg';
-import { withTransaction } from '@social/platform-db';
+import {
+  decodeCursor,
+  paginateRows,
+  type PageMeta,
+  withTransaction,
+} from '@social/platform-db';
 import { appendOutbox } from '@social/platform-events';
 import { uuidv7 } from 'uuidv7';
 import type { CreatePostInput } from './posts.validation';
@@ -441,18 +448,34 @@ export class PostsService {
     authorId: string,
     limit = 20,
     viewerId?: string,
-  ): Promise<PostDto[]> {
+    cursor?: string,
+  ): Promise<{ posts: PostDto[]; page: PageMeta }> {
     await this.assertCanViewAuthor(authorId, viewerId);
     const safeLimit = Math.min(Math.max(limit, 1), 100);
+    let beforeId: string | null = null;
+    if (cursor) {
+      try {
+        const c = decodeCursor<{ id?: string }>(cursor);
+        beforeId = typeof c.id === 'string' ? c.id : null;
+        if (!beforeId) throw new Error('invalid_cursor');
+      } catch {
+        throw new BadRequestException('Invalid cursor');
+      }
+    }
     const rows = await this.pool.query(
       `SELECT ${POST_SELECT}
        FROM post.posts
        WHERE author_id = $1 AND deleted_at IS NULL AND reply_to_id IS NULL
+         AND ($2::uuid IS NULL OR id < $2::uuid)
        ORDER BY id DESC
-       LIMIT $2`,
-      [authorId, safeLimit],
+       LIMIT $3`,
+      [authorId, beforeId, safeLimit + 1],
     );
-    return (rows.rows as PostRow[]).map(mapPost);
+    const mapped = (rows.rows as PostRow[]).map(mapPost);
+    const { items, page } = paginateRows(mapped, safeLimit, (p) => ({
+      id: p.id,
+    }));
+    return { posts: items, page };
   }
 
   async listReplies(

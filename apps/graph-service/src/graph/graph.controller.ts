@@ -65,24 +65,18 @@ export class GraphController {
   async following(
     @Param('userId') userId: string,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
-    const items = await this.graph.listFollowing(
-      userId,
-      limit ? Number(limit) : 50,
-    );
-    return { items };
+    return this.graph.listFollowing(userId, limit ? Number(limit) : 50, cursor);
   }
 
   @Get('followers/:userId')
   async followers(
     @Param('userId') userId: string,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
-    const items = await this.graph.listFollowers(
-      userId,
-      limit ? Number(limit) : 50,
-    );
-    return { items };
+    return this.graph.listFollowers(userId, limit ? Number(limit) : 50, cursor);
   }
 
   /** Internal fan-out helper (ids only). */

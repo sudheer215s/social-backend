@@ -18,4 +18,10 @@ export {
   type TransactionOptions,
 } from './transaction';
 export { withAdvisoryLeaderLock, advisoryLockKey } from './advisory-lock';
+export {
+  encodeCursor,
+  decodeCursor,
+  paginateRows,
+  type PageMeta,
+} from './cursor';
 export { createDb, type Db } from './drizzle';

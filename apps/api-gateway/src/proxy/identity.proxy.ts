@@ -1,3 +1,5 @@
+import { outboundRequestHeaders } from '@social/platform-telemetry';
+
 /**
  * Thin HTTP forwarder to identity-service until gRPC is wired (Phase 1).
  */
@@ -9,9 +11,7 @@ export class IdentityProxy {
     path: string,
     options?: { body?: unknown; authorization?: string },
   ): Promise<{ status: number; json: unknown }> {
-    const headers: Record<string, string> = {
-      accept: 'application/json',
-    };
+    const headers = outboundRequestHeaders({ accept: 'application/json' });
     if (options?.body !== undefined) {
       headers['content-type'] = 'application/json';
     }
