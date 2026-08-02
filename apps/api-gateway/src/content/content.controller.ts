@@ -5,20 +5,37 @@ import {
   Get,
   HttpCode,
   HttpException,
+  Inject,
+  Optional,
   Param,
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import {
+  hashIdempotencyParts,
+  hashRequestBody,
+  type IdempotencyStore,
+} from '@social/platform-redis';
 import type { AuthedRequest } from '../auth/auth.guard';
 import { AuthGuard } from '../auth/auth.guard';
+import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
+import { IDEMPOTENCY_STORE } from '../tokens';
 
 /**
  * HTTP proxy to post-service and graph-service until BFF composition lands.
  */
 @Controller()
 export class ContentController {
+  constructor(
+    @Optional()
+    @Inject(IDEMPOTENCY_STORE)
+    private readonly idempotency: IdempotencyStore | null = null,
+  ) {}
+
   private async forward(
     baseEnv: string,
     fallback: string,
@@ -62,20 +79,122 @@ export class ContentController {
     return typeof h === 'string' ? h : undefined;
   }
 
+  /**
+   * Create post. Requires `Idempotency-Key` (design §5) so retries do not
+   * double-publish. Replays return the stored body with `Idempotent-Replay: true`.
+   */
   @Post('v1/posts')
   @UseGuards(AuthGuard)
-  createPost(@Req() req: AuthedRequest, @Body() body: unknown) {
+  async createPost(
+    @Req() req: AuthedRequest,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const authorization = this.bearer(req);
-    return this.forward(
-      'POST_BASE_URL',
-      'http://127.0.0.1:3002',
-      'POST',
-      '/v1/posts',
-      {
-        body,
-        ...(authorization ? { authorization } : {}),
-      },
-    );
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new HttpException({ message: 'Unauthorized' }, 401);
+    }
+
+    const rawKey = req.headers['idempotency-key'];
+    const idemKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+    const requireKey = process.env.IDEMPOTENCY_OPTIONAL !== '1';
+    if (requireKey && (!idemKey || idemKey.length > 128)) {
+      throw new HttpException(
+        {
+          type: 'about:blank',
+          title: 'Bad Request',
+          status: 400,
+          detail: 'Idempotency-Key header required (1–128 chars)',
+        },
+        400,
+      );
+    }
+
+    if (!this.idempotency || !idemKey) {
+      return this.forward(
+        'POST_BASE_URL',
+        'http://127.0.0.1:3002',
+        'POST',
+        '/v1/posts',
+        {
+          body,
+          ...(authorization ? { authorization } : {}),
+        },
+      );
+    }
+
+    const storeKey = hashIdempotencyParts(userId, 'POST', '/v1/posts', idemKey);
+    const requestHash = hashRequestBody(body);
+    const begin = await this.idempotency.begin(storeKey, requestHash);
+
+    if (begin.outcome === 'conflict') {
+      throw new HttpException(
+        {
+          type: 'about:blank',
+          title: 'Unprocessable Entity',
+          status: 422,
+          detail: 'Idempotency-Key reused with a different request body',
+        },
+        422,
+      );
+    }
+    if (begin.outcome === 'in_flight') {
+      res.setHeader('Retry-After', '1');
+      throw new HttpException(
+        {
+          type: 'about:blank',
+          title: 'Conflict',
+          status: 409,
+          detail: 'Request with this Idempotency-Key is already in flight',
+        },
+        409,
+      );
+    }
+    if (begin.outcome === 'replay') {
+      res.setHeader('Idempotent-Replay', 'true');
+      if (begin.status >= 400) {
+        throw new HttpException(
+          (begin.body as object) ?? { message: 'Upstream error' },
+          begin.status,
+        );
+      }
+      res.status(begin.status);
+      return begin.body;
+    }
+
+    try {
+      const json = await this.forward(
+        'POST_BASE_URL',
+        'http://127.0.0.1:3002',
+        'POST',
+        '/v1/posts',
+        {
+          body,
+          ...(authorization ? { authorization } : {}),
+        },
+      );
+      await this.idempotency.complete(storeKey, requestHash, 201, json);
+      res.status(201);
+      return json;
+    } catch (err) {
+      if (err instanceof HttpException) {
+        const status = err.getStatus();
+        if (status < 500) {
+          await this.idempotency.complete(
+            storeKey,
+            requestHash,
+            status,
+            err.getResponse(),
+          );
+        } else {
+          await this.idempotency.abandon(storeKey);
+        }
+      } else {
+        await this.idempotency.abandon(storeKey);
+      }
+      throw err;
+    }
   }
 
   @Get('v1/posts')
@@ -422,7 +541,7 @@ export class ContentController {
 
   /** Short-lived ticket for SSE on realtime-gateway (not JWT-in-query). */
   @Post('v1/realtime/ticket')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RateLimitGuard)
   realtimeTicket(@Req() req: AuthedRequest) {
     const authorization = this.bearer(req);
     return this.forward(

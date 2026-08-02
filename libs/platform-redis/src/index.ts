@@ -12,3 +12,11 @@ export {
   type RateLimitResult,
   type RateLimiter,
 } from './rate-limit';
+export {
+  MemoryIdempotencyStore,
+  RedisIdempotencyStore,
+  hashIdempotencyParts,
+  hashRequestBody,
+  type IdempotencyBeginResult,
+  type IdempotencyStore,
+} from './idempotency';

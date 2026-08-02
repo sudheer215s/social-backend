@@ -8,7 +8,9 @@ labels:
   - pairs:
       environment: prod
     includeSelectors: false
-# Pin to registry + tag; prefer `digest:` once CI publishes immutable digests
+# Pin to registry + tag; prefer `digest:` once CI publishes immutable digests.
+# Generate: REGISTRY=ghcr.io/myorg TAG=1.0.0 pnpm k8s:pin-digests
+#           REGISTRY=… TAG=… node scripts/k8s-pin-digests.mjs --write
 # (see images-digests.example.yaml).
 images:
   - name: social-identity
@@ -18,24 +20,31 @@ images:
   - name: social-post
     newName: ghcr.io/example/social-post
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-graph
     newName: ghcr.io/example/social-graph
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-timeline
     newName: ghcr.io/example/social-timeline
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-notification
     newName: ghcr.io/example/social-notification
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-search
     newName: ghcr.io/example/social-search
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-realtime
     newName: ghcr.io/example/social-realtime
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
   - name: social-gateway
     newName: ghcr.io/example/social-gateway
     newTag: '1.0.0'
+    # digest: sha256:REPLACE_ME
 patches:
   - target:
       kind: Deployment

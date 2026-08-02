@@ -61,15 +61,24 @@ Remote key conventions (prod ExternalSecret):
 Prefer immutable digests over floating tags:
 
 ```bash
+# Resolve digests for all app images (needs crane or docker buildx):
+REGISTRY=ghcr.io/myorg TAG=1.0.0 pnpm k8s:pin-digests
+# Optionally write digests into overlays/prod/kustomization.yaml:
+REGISTRY=ghcr.io/myorg TAG=1.0.0 node scripts/k8s-pin-digests.mjs --write
+
+# Manual single image:
 crane digest ghcr.io/example/social-gateway:1.0.0
-# then in overlays/prod/kustomization.yaml:
-# images:
-#   - name: social-gateway
-#     newName: ghcr.io/example/social-gateway
-#     digest: sha256:…
 ```
 
 See `overlays/prod/images-digests.example.yaml`.
+
+## Prod checklist
+
+1. Install External Secrets Operator; edit `external-secrets/cluster-secret-store.yaml` for your cloud.
+2. Create remote secrets at `social/prod/*` keys listed above.
+3. `pnpm k8s:secrets:eso` then wait for `social-secrets` to sync.
+4. Push images; `REGISTRY=… TAG=… pnpm k8s:pin-digests` and merge digests into prod kustomization.
+5. `pnpm k8s:issuers && pnpm k8s:apply:prod` (or Argo CD).
 
 ## Optional KEDA
 

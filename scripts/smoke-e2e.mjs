@@ -27,8 +27,8 @@ function fail(name, detail) {
   console.error(`  ✗ ${name}: ${detail}`);
 }
 
-async function req(method, path, { body, token } = {}) {
-  const headers = { accept: 'application/json' };
+async function req(method, path, { body, token, headers: extra } = {}) {
+  const headers = { accept: 'application/json', ...(extra ?? {}) };
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
   const res = await fetch(`${base}${path}`, {
@@ -45,7 +45,7 @@ async function req(method, path, { body, token } = {}) {
       json = { raw: text };
     }
   }
-  return { status: res.status, json };
+  return { status: res.status, json, headers: res.headers };
 }
 
 async function main() {
@@ -110,14 +110,36 @@ async function main() {
   }
   ok(`register B (${idB.slice(0, 8)}…)`);
 
-  // A creates a post
+  // A creates a post (Idempotency-Key required at gateway)
+  const idemKey = `smoke-post-${suffix}`;
+  const postBody = { content: `hello smoke ${suffix} #e2e` };
   const postRes = await req('POST', '/v1/posts', {
     token: tokenA,
-    body: { content: `hello smoke ${suffix} #e2e` },
+    body: postBody,
+    headers: { 'idempotency-key': idemKey },
   });
   if (postRes.status >= 400 || !postRes.json?.post?.id) {
     fail('create post', JSON.stringify(postRes.json));
   } else {
+    const replay = await req('POST', '/v1/posts', {
+      token: tokenA,
+      body: postBody,
+      headers: { 'idempotency-key': idemKey },
+    });
+    if (
+      replay.status < 400 &&
+      replay.json?.post?.id === postRes.json.post.id &&
+      replay.headers.get('idempotent-replay') === 'true'
+    ) {
+      ok('create post idempotent replay');
+    } else if (
+      replay.status < 400 &&
+      replay.json?.post?.id === postRes.json.post.id
+    ) {
+      ok('create post idempotent replay (same id)');
+    } else {
+      fail('create post idempotent replay', JSON.stringify(replay.json));
+    }
     ok(`create post ${postRes.json.post.id.slice(0, 8)}…`);
   }
   const postId = postRes.json?.post?.id;

@@ -2,10 +2,13 @@ import { Module } from '@nestjs/common';
 import {
   createRedisClient,
   MemoryFixedWindowRateLimiter,
+  MemoryIdempotencyStore,
   MemorySidRevocationStore,
   NoopSidRevocationStore,
   RedisFixedWindowRateLimiter,
+  RedisIdempotencyStore,
   RedisSidRevocationStore,
+  type IdempotencyStore,
   type RateLimiter,
   type RedisClient,
   type SidRevocationStore,
@@ -20,7 +23,12 @@ import { MetricsController } from './metrics.controller';
 import { IdentityGrpcClient } from './proxy/identity.grpc.client';
 import { IdentityProxy } from './proxy/identity.proxy';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
-import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
+import {
+  IDEMPOTENCY_STORE,
+  RATE_LIMITER,
+  REDIS,
+  SID_REVOCATION,
+} from './tokens';
 
 @Module({
   controllers: [
@@ -86,6 +94,16 @@ import { RATE_LIMITER, REDIS, SID_REVOCATION } from './tokens';
           return new MemoryFixedWindowRateLimiter();
         }
         return new RedisFixedWindowRateLimiter(redis, 'gw-rl:');
+      },
+    },
+    {
+      provide: IDEMPOTENCY_STORE,
+      inject: [REDIS],
+      useFactory: (redis: RedisClient | null): IdempotencyStore => {
+        if (!redis) {
+          return new MemoryIdempotencyStore();
+        }
+        return new RedisIdempotencyStore(redis, 'gw-idem:');
       },
     },
     {
