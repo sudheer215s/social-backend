@@ -14,6 +14,7 @@ import type { Consumer, Producer } from 'kafkajs';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { startFanoutConsumer } from './fanout/fanout.consumer';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { TimelineController } from './timeline/timeline.controller';
 import { TimelineService } from './timeline/timeline.service';
 import { TimelineStore } from './timeline/timeline.store';
@@ -22,7 +23,7 @@ export const REDIS = Symbol('REDIS');
 export const TIMELINE_STORE = Symbol('TIMELINE_STORE');
 
 @Module({
-  controllers: [TimelineController, HealthController],
+  controllers: [TimelineController, HealthController, MetricsController],
   providers: [
     {
       provide: REDIS,

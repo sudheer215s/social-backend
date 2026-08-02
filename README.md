@@ -26,6 +26,7 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter at hydration                                                |
 | Notifications | Follow/like/follow_request aggregation, Redis stream pointers, block/mute suppress                                                   |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
+| Observability | **HTTP RED** (`http_requests_total`, `http_request_duration_seconds`, `http_request_errors_total`) on all HTTP apps                  |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
 | Edge          | API gateway (JWT, rate limit, sid revocation), route inventory, smoke e2e                                                            |
 
@@ -35,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Mention repair worker for unresolved @handles; full HTTP RED metrics; production secret store / image digests wired for real clusters; grapheme-accurate post length.
+Production secret store / image digests wired for real clusters; mention-repair depends on identity being up (no multi-tenant job leader yet).
 
 ---
 
@@ -169,9 +170,22 @@ GET  /v1/posts/:id/thread
 
 ### Mentions, hashtags, private content
 
-- `@username` (max 10) resolved via identity (300ms, failure → store unresolved). Emits `user.mentioned` → notif `mention`.
+- `@username` (max 10) resolved via identity (300ms, failure → store unresolved). Emits `user.mentioned` → notif `mention`. **mention-repair** retries unresolved rows every 15 min.
 - `#hashtag` (max 10) stored normalised; search indexes hashtags from content.
+- Post length: **≤280 grapheme clusters** (API); DB allows multi-codepoint emoji within a byte budget.
 - Authors with `visibility=followers`: anonymous `GET` post/profile feed returns **404**; followers (JWT) may read. Search never indexes their posts (`author_visibility=public` filter + skip on index).
+
+### Metrics (RED)
+
+Every HTTP service exposes `GET /metrics` (Prometheus text):
+
+| Metric                                                     | RED                |
+| ---------------------------------------------------------- | ------------------ |
+| `http_requests_total{method,route,status_class}`           | Rate               |
+| `http_request_errors_total{method,route}`                  | Errors (5xx)       |
+| `http_request_duration_seconds{method,route,status_class}` | Duration histogram |
+
+Routes are cardinality-limited (UUIDs → `:id`). Health and `/metrics` itself are not counted.
 
 ---
 

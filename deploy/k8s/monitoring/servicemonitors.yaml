@@ -4,35 +4,24 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: realtime-gateway
+  name: social-http-red
   namespace: social
   labels:
-    app: realtime-gateway
     release: kube-prometheus-stack
 spec:
   selector:
-    matchLabels:
-      app: realtime-gateway
-  namespaceSelector:
-    matchNames: [social]
-  endpoints:
-    - port: http
-      path: /metrics
-      interval: 15s
-      scrapeTimeout: 10s
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: api-gateway
-  namespace: social
-  labels:
-    app: api-gateway
-    release: kube-prometheus-stack
-spec:
-  selector:
-    matchLabels:
-      app: api-gateway
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - api-gateway
+          - realtime-gateway
+          - identity-service
+          - post-service
+          - graph-service
+          - timeline-service
+          - notification-service
+          - search-service
   namespaceSelector:
     matchNames: [social]
   endpoints:
@@ -54,6 +43,8 @@ spec:
       - key: app
         operator: In
         values:
+          - api-gateway
+          - realtime-gateway
           - identity-service
           - post-service
           - graph-service

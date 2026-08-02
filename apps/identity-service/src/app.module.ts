@@ -38,6 +38,7 @@ import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { ConsoleEmailAdapter } from './email/console-email.adapter';
 import { ErasureWorker, startErasureWorker } from './erasure/erasure.worker';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
 import { SessionService } from './tokens/session.service';
 import { IdentityGrpcController } from './grpc/identity.grpc.controller';
@@ -56,6 +57,7 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
     UsersController,
     HealthController,
     IdentityGrpcController,
+    MetricsController,
   ],
   providers: [
     {

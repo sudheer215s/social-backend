@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { graphemeLength, MAX_POST_GRAPHEMES } from './grapheme';
 
 export const createPostSchema = z
   .object({
-    content: z.string().max(280).optional().default(''),
+    content: z.string().optional().default(''),
     mediaRefs: z.array(z.string().min(1).max(128)).max(4).optional(),
     replyToId: z.string().uuid().optional(),
     repostOfId: z.string().uuid().optional(),
@@ -20,6 +21,14 @@ export const createPostSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'content is required unless repostOfId is set',
+        path: ['content'],
+      });
+    }
+    const g = graphemeLength(content);
+    if (g > MAX_POST_GRAPHEMES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `content exceeds ${MAX_POST_GRAPHEMES} graphemes (got ${g})`,
         path: ['content'],
       });
     }

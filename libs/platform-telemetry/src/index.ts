@@ -20,9 +20,16 @@ export {
 export {
   Counter,
   Gauge,
+  Histogram,
   MetricsRegistry,
   defaultRegistry,
+  httpRequestDurationSeconds,
+  httpRequestErrorsTotal,
   httpRequestsTotal,
+  normalizeHttpRoute,
   realtimeTicketsIssuedTotal,
+  statusClass,
   websocketActiveConnections,
+  type Labels,
 } from './metrics';
+export { httpMetricsMiddleware } from './http-metrics';

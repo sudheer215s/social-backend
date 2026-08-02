@@ -13,6 +13,7 @@ import {
 import { HealthService } from '@social/platform-telemetry';
 import type { Consumer, Producer } from 'kafkajs';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { EsClient } from './search/es.client';
 import { SearchController } from './search/search.controller';
 import { SearchService } from './search/search.service';
@@ -22,7 +23,7 @@ export const ES_CLIENT = Symbol('ES_CLIENT');
 const CONSUMER_GROUP = 'search-indexer';
 
 @Module({
-  controllers: [SearchController, HealthController],
+  controllers: [SearchController, HealthController, MetricsController],
   providers: [
     {
       provide: ES_CLIENT,

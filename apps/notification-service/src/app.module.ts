@@ -19,6 +19,7 @@ import type { Pool } from 'pg';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 import { NotificationsController } from './notifications/notifications.controller';
 import { NotificationsService } from './notifications/notifications.service';
 
@@ -28,7 +29,7 @@ export const REDIS = Symbol('REDIS');
 const CONSUMER_GROUP = 'notification-processor';
 
 @Module({
-  controllers: [NotificationsController, HealthController],
+  controllers: [NotificationsController, HealthController, MetricsController],
   providers: [
     {
       provide: PG_POOL,

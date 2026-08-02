@@ -22,11 +22,12 @@ import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { GraphController } from './graph/graph.controller';
 import { GraphService } from './graph/graph.service';
 import { HealthController } from './health.controller';
+import { MetricsController } from './metrics.controller';
 
 export const PG_POOL = Symbol('PG_POOL');
 
 @Module({
-  controllers: [GraphController, HealthController],
+  controllers: [GraphController, HealthController, MetricsController],
   providers: [
     {
       provide: PG_POOL,

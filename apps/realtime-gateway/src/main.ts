@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import type { RedisClient } from '@social/platform-redis';
-import { createLogger } from '@social/platform-telemetry';
+import {
+  createLogger,
+  httpMetricsMiddleware,
+} from '@social/platform-telemetry';
 import { AppModule, REDIS } from './app.module';
 import { attachRealtimeWebSocket } from './realtime/ws.gateway';
 import { TicketService } from './ticket/ticket.service';
@@ -13,6 +16,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+  app.use(httpMetricsMiddleware());
   const port = process.env.PORT ?? '3007';
   await app.listen(port);
 

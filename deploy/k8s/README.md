@@ -87,11 +87,11 @@ Examples scale notification/timeline on **Kafka consumer lag** and realtime on
 pnpm k8s:monitoring
 ```
 
-| Endpoint            | Service          | Metrics                                                                    |
-| ------------------- | ---------------- | -------------------------------------------------------------------------- |
-| `GET /metrics`      | realtime-gateway | `websocket_active_connections{transport}`, `realtime_tickets_issued_total` |
-| `GET /metrics`      | api-gateway      | registry ready for HTTP counters                                           |
-| `GET /health/ready` | other apps       | blackbox-style scrape via ServiceMonitor                                   |
+| Endpoint            | Service          | Metrics                                                                             |
+| ------------------- | ---------------- | ----------------------------------------------------------------------------------- |
+| `GET /metrics`      | all HTTP apps    | `http_requests_total`, `http_request_duration_seconds`, `http_request_errors_total` |
+| `GET /metrics`      | realtime-gateway | + `websocket_active_connections{transport}`, `realtime_tickets_issued_total`        |
+| `GET /health/ready` | all apps         | readiness (ServiceMonitor / blackbox)                                               |
 
 ## GitOps
 

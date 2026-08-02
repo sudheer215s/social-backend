@@ -20,13 +20,15 @@ import { JwtAuthGuard } from './auth/jwt.guard';
 import { AuthorCascadeService } from './cascade/author-cascade.service';
 import { applyMigrations, defaultMigrationsDir } from './db/migrate';
 import { HealthController } from './health.controller';
+import { MentionRepairService } from './mentions/mention-repair.service';
+import { MetricsController } from './metrics.controller';
 import { PostsController } from './posts/posts.controller';
 import { PostsService } from './posts/posts.service';
 
 export const PG_POOL = Symbol('PG_POOL');
 
 @Module({
-  controllers: [PostsController, HealthController],
+  controllers: [PostsController, HealthController, MetricsController],
   providers: [
     {
       provide: PG_POOL,
@@ -60,6 +62,11 @@ export const PG_POOL = Symbol('PG_POOL');
       inject: [PG_POOL],
       useFactory: (pool: Pool) => new AuthorCascadeService(pool),
     },
+    {
+      provide: MentionRepairService,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new MentionRepairService(pool),
+    },
     JwtAuthGuard,
   ],
 })
@@ -68,17 +75,21 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   private cascadeConsumer: Consumer | undefined;
   private stopRelay: (() => void) | undefined;
   private stopCascade: (() => Promise<void>) | undefined;
+  private mentionTimer: ReturnType<typeof setInterval> | undefined;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(AuthorCascadeService)
     private readonly authorCascade: AuthorCascadeService,
+    @Inject(MentionRepairService)
+    private readonly mentionRepair: MentionRepairService,
   ) {}
 
   async onModuleInit(): Promise<void> {
     if (process.env.POST_SKIP_MIGRATE !== '1') {
       await applyMigrations(this.pool, defaultMigrationsDir());
     }
+    this.startMentionRepair();
     if (process.env.KAFKA_DISABLED === '1') {
       return;
     }
@@ -130,11 +141,35 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    if (this.mentionTimer) clearInterval(this.mentionTimer);
     this.stopRelay?.();
     if (this.stopCascade) await this.stopCascade();
     if (this.producer) {
       await this.producer.disconnect();
     }
     await this.pool.end();
+  }
+
+  private startMentionRepair(): void {
+    if (process.env.POST_SKIP_MENTION_REPAIR === '1') return;
+    const intervalMs = Number(
+      process.env.MENTION_REPAIR_INTERVAL_MS ?? 15 * 60 * 1000,
+    );
+    const safe =
+      Number.isFinite(intervalMs) && intervalMs >= 10_000
+        ? intervalMs
+        : 15 * 60 * 1000;
+    // Fire once shortly after boot, then on interval.
+    setTimeout(() => {
+      void this.mentionRepair.repairBatch().catch((err) => {
+        console.warn('[mention-repair]', err);
+      });
+    }, 5_000);
+    this.mentionTimer = setInterval(() => {
+      void this.mentionRepair.repairBatch().catch((err) => {
+        console.warn('[mention-repair]', err);
+      });
+    }, safe);
+    this.mentionTimer.unref?.();
   }
 }

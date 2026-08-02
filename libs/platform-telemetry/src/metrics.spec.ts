@@ -1,7 +1,10 @@
 import {
   Counter,
   Gauge,
+  Histogram,
   MetricsRegistry,
+  normalizeHttpRoute,
+  statusClass,
   websocketActiveConnections,
 } from './metrics';
 
@@ -36,5 +39,31 @@ describe('metrics', () => {
     const g = new Gauge('g', 'g');
     g.set(9);
     expect(g.get()).toBe(9);
+  });
+
+  it('renders histogram buckets', () => {
+    const reg = new MetricsRegistry();
+    const h = reg.histogram('lat', 'latency', [0.1, 0.5, 1]);
+    h.observe(0.05, { method: 'GET' });
+    h.observe(0.4, { method: 'GET' });
+    h.observe(2, { method: 'GET' });
+    const text = reg.render();
+    expect(text).toContain('# TYPE lat histogram');
+    expect(text).toContain('lat_bucket{le="0.1",method="GET"} 1');
+    expect(text).toContain('lat_bucket{le="0.5",method="GET"} 2');
+    expect(text).toContain('lat_bucket{le="+Inf",method="GET"} 3');
+    expect(text).toContain('lat_count{method="GET"} 3');
+  });
+
+  it('normalizes routes for low cardinality', () => {
+    expect(
+      normalizeHttpRoute(
+        '/v1/posts/018f0000-0000-7000-8000-000000000001/likes',
+      ),
+    ).toBe('/v1/posts/:id/likes');
+    expect(normalizeHttpRoute('/v1/search?q=hi')).toBe('/v1/search');
+    expect(statusClass(503)).toBe('5xx');
+    expect(statusClass(404)).toBe('4xx');
+    expect(statusClass(200)).toBe('2xx');
   });
 });
