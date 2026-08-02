@@ -17,7 +17,11 @@ async function makeSigner() {
 describe('JwtVerifier', () => {
   it('accepts a valid EdDSA access token', async () => {
     const { privateKey, getKey } = await makeSigner();
-    const token = await new jose.SignJWT({ sid: 'sess-1', scope: ['user'] })
+    const token = await new jose.SignJWT({
+      sid: 'sess-1',
+      scope: ['user'],
+      email_verified: true,
+    })
       .setProtectedHeader({ alg: 'EdDSA', kid: 'test-kid' })
       .setIssuer('http://identity')
       .setAudience('api')
@@ -35,6 +39,7 @@ describe('JwtVerifier', () => {
       userId: 'user-1',
       sessionId: 'sess-1',
       scope: ['user'],
+      emailVerified: true,
     });
   });
 

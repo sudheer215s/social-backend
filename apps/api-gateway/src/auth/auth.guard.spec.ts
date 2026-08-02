@@ -10,6 +10,7 @@ describe('AuthGuard revocation', () => {
         userId: 'u1',
         sessionId: 's1',
         scope: ['user'],
+        emailVerified: true,
       }),
     } as unknown as JwtVerifier;
     const revocation = new MemorySidRevocationStore();
@@ -31,6 +32,7 @@ describe('AuthGuard revocation', () => {
         userId: 'u1',
         sessionId: 's2',
         scope: ['user'],
+        emailVerified: true,
       }),
     } as unknown as JwtVerifier;
     const revocation = new MemorySidRevocationStore();

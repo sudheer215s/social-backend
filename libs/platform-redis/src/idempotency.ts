@@ -49,7 +49,11 @@ export function hashIdempotencyParts(
 
 export function hashRequestBody(body: unknown): string {
   const raw =
-    body === undefined ? '' : typeof body === 'string' ? body : stableStringify(body);
+    body === undefined
+      ? ''
+      : typeof body === 'string'
+        ? body
+        : stableStringify(body);
   return createHash('sha256').update(raw, 'utf8').digest('hex');
 }
 
@@ -115,10 +119,7 @@ export class RedisIdempotencyStore implements IdempotencyStore {
     await this.redis.del(this.k(key));
   }
 
-  private interpret(
-    raw: string,
-    requestHash: string,
-  ): IdempotencyBeginResult {
+  private interpret(raw: string, requestHash: string): IdempotencyBeginResult {
     let parsed: Stored;
     try {
       parsed = JSON.parse(raw) as Stored;
@@ -151,6 +152,7 @@ export class MemoryIdempotencyStore implements IdempotencyStore {
     requestHash: string,
     inflightTtlSec = DEFAULT_INFLIGHT,
   ): Promise<IdempotencyBeginResult> {
+    await Promise.resolve();
     this.gc();
     const cur = this.map.get(key);
     if (cur) {
@@ -170,6 +172,7 @@ export class MemoryIdempotencyStore implements IdempotencyStore {
     body: unknown,
     ttlSec = DEFAULT_TTL,
   ): Promise<void> {
+    await Promise.resolve();
     this.map.set(key, {
       stored: { state: 'completed', requestHash, status, body },
       expiresAt: Date.now() + ttlSec * 1000,
@@ -177,6 +180,7 @@ export class MemoryIdempotencyStore implements IdempotencyStore {
   }
 
   async abandon(key: string): Promise<void> {
+    await Promise.resolve();
     this.map.delete(key);
   }
 

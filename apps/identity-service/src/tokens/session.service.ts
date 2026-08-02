@@ -29,7 +29,7 @@ export class SessionService {
 
   async issueSession(
     userId: string,
-    meta?: { userAgent?: string; ipHash?: Buffer },
+    meta?: { userAgent?: string; ipHash?: Buffer; emailVerified?: boolean },
     client?: PoolClient,
   ): Promise<TokenPair> {
     const sessionId = uuidv7();
@@ -61,10 +61,14 @@ export class SessionService {
       await withTransaction(this.pool, run);
     }
 
+    const emailVerified =
+      meta?.emailVerified ?? (await this.loadEmailVerified(userId, client));
+
     const accessToken = await this.keys.signAccessToken({
       sub: userId,
       sid: sessionId,
       scope: ['user'],
+      emailVerified,
     });
 
     return {
@@ -74,6 +78,18 @@ export class SessionService {
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
       sessionId,
     };
+  }
+
+  private async loadEmailVerified(
+    userId: string,
+    client?: PoolClient,
+  ): Promise<boolean> {
+    const q = client ?? this.pool;
+    const r = await q.query<{ email_verified: boolean }>(
+      `SELECT email_verified FROM identity.users WHERE id = $1`,
+      [userId],
+    );
+    return r.rows[0]?.email_verified === true;
   }
 
   async refresh(refreshToken: string): Promise<TokenPair> {
@@ -159,10 +175,12 @@ export class SessionService {
       );
       await client.query('COMMIT');
 
+      const emailVerified = await this.loadEmailVerified(row.user_id);
       const accessToken = await this.keys.signAccessToken({
         sub: row.user_id,
         sid: row.id,
         scope: ['user'],
+        emailVerified,
       });
 
       return {

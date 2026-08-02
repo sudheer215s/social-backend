@@ -4,6 +4,7 @@ export interface AccessPrincipal {
   userId: string;
   sessionId: string;
   scope: string[];
+  emailVerified: boolean;
 }
 
 export interface JwtVerifierOptions {
@@ -46,6 +47,11 @@ export class JwtVerifier {
     const scope = Array.isArray(payload.scope)
       ? payload.scope.filter((s): s is string => typeof s === 'string')
       : [];
-    return { userId, sessionId, scope };
+    return {
+      userId,
+      sessionId,
+      scope,
+      emailVerified: payload.email_verified === true,
+    };
   }
 }

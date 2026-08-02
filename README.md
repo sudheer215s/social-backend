@@ -28,7 +28,7 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
 | Observability | **HTTP RED** (`http_requests_total`, `http_request_duration_seconds`, `http_request_errors_total`) on all HTTP apps                  |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
-| Edge          | API gateway (JWT, trusted XFF limits, httpOnly `rt`, **Idempotency-Key** on create post, ticket RL), smoke e2e                       |
+| Edge          | API gateway (JWT + **email_verified claim**, trusted XFF, httpOnly `rt`, Idempotency-Key, ticket RL), smoke e2e                      |
 
 ### Explicit non-goals (v2 design)
 
@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Wire `TRUSTED_PROXIES` and real registry digests per environment; optional ESLint import boundaries (P0-T04).
+Wire `TRUSTED_PROXIES` and real registry digests per environment when deploying.
 
 ---
 
@@ -208,6 +208,21 @@ Idempotency-Key: <client-generated unique key>
 ```
 
 Retries with the same key + body return the original response (`Idempotent-Replay: true`). Same key + different body → `422`. Concurrent in-flight → `409`. Server 5xx drops the key so a genuine retry can proceed. Stored in Redis (24h). Set `IDEMPOTENCY_OPTIONAL=1` only for local break-glass.
+
+### Email verification (write path)
+
+Access tokens carry `email_verified`. In production (or when `ENFORCE_EMAIL_VERIFIED=1`), gateway write routes (post/like/follow/block/mute) return:
+
+```json
+{
+  "type": "https://api.social.example.com/problems/email-not-verified",
+  "title": "Email not verified",
+  "status": 403,
+  "detail": "Verify your email before performing this action."
+}
+```
+
+Local/smoke leaves enforcement off so register → post still works. After verify-email, clients must **refresh** to pick up `email_verified=true` in a new access token.
 
 ### Prod deploy helpers
 

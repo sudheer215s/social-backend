@@ -8,6 +8,8 @@ export interface AccessClaims {
   sub: string;
   sid: string;
   scope: string[];
+  /** Whether the user has verified their email (write-path gating). */
+  emailVerified: boolean;
 }
 
 export interface VerifiedAccess {
@@ -15,6 +17,7 @@ export interface VerifiedAccess {
   sid: string;
   jti: string;
   scope: string[];
+  emailVerified: boolean;
   exp: number;
   iat: number;
 }
@@ -52,6 +55,7 @@ export class JwtKeyRing {
     return new jose.SignJWT({
       sid: claims.sid,
       scope: claims.scope,
+      email_verified: claims.emailVerified,
     })
       .setProtectedHeader({ alg: 'EdDSA', kid: this.current.kid, typ: 'JWT' })
       .setIssuer(this.issuer)
@@ -93,6 +97,7 @@ export class JwtKeyRing {
           sid,
           jti,
           scope,
+          emailVerified: payload.email_verified === true,
           exp: payload.exp ?? 0,
           iat: payload.iat ?? 0,
         };

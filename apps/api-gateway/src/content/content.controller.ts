@@ -22,6 +22,7 @@ import {
 } from '@social/platform-redis';
 import type { AuthedRequest } from '../auth/auth.guard';
 import { AuthGuard } from '../auth/auth.guard';
+import { EmailVerifiedGuard } from '../auth/email-verified.guard';
 import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
 import { IDEMPOTENCY_STORE } from '../tokens';
 
@@ -84,7 +85,7 @@ export class ContentController {
    * double-publish. Replays return the stored body with `Idempotent-Replay: true`.
    */
   @Post('v1/posts')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   async createPost(
     @Req() req: AuthedRequest,
     @Body() body: unknown,
@@ -262,7 +263,7 @@ export class ContentController {
   }
 
   @Delete('v1/posts/:id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   deletePost(@Req() req: AuthedRequest, @Param('id') id: string) {
     const authorization = this.bearer(req);
@@ -276,7 +277,7 @@ export class ContentController {
   }
 
   @Post('v1/posts/:id/likes')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   like(@Req() req: AuthedRequest, @Param('id') id: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -289,7 +290,7 @@ export class ContentController {
   }
 
   @Delete('v1/posts/:id/likes')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   unlike(@Req() req: AuthedRequest, @Param('id') id: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -302,7 +303,7 @@ export class ContentController {
   }
 
   @Post('v1/graph/follows/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   follow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -315,7 +316,7 @@ export class ContentController {
   }
 
   @Delete('v1/graph/follows/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   unfollow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
@@ -346,7 +347,7 @@ export class ContentController {
   }
 
   @Post('v1/graph/follow-requests/:requesterId/accept')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   acceptFollowRequest(
     @Req() req: AuthedRequest,
     @Param('requesterId') requesterId: string,
@@ -362,7 +363,7 @@ export class ContentController {
   }
 
   @Post('v1/graph/follow-requests/:requesterId/reject')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   rejectFollowRequest(
     @Req() req: AuthedRequest,
@@ -401,7 +402,7 @@ export class ContentController {
   }
 
   @Post('v1/graph/blocks/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   block(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
@@ -415,7 +416,7 @@ export class ContentController {
   }
 
   @Delete('v1/graph/blocks/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   unblock(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
@@ -429,7 +430,7 @@ export class ContentController {
   }
 
   @Post('v1/graph/mutes/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   mute(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
@@ -443,7 +444,7 @@ export class ContentController {
   }
 
   @Delete('v1/graph/mutes/:userId')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard)
   @HttpCode(204)
   unmute(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);

@@ -15,11 +15,13 @@ describe('JwtKeyRing', () => {
       sub: 'user-1',
       sid: 'session-1',
       scope: ['user'],
+      emailVerified: true,
     });
     const verified = await ring.verifyAccessToken(token);
     expect(verified.sub).toBe('user-1');
     expect(verified.sid).toBe('session-1');
     expect(verified.scope).toEqual(['user']);
+    expect(verified.emailVerified).toBe(true);
     expect(verified.exp).toBeGreaterThan(verified.iat);
   });
 
@@ -41,20 +43,24 @@ describe('JwtKeyRing', () => {
       sub: 'u',
       sid: 's',
       scope: ['user'],
+      emailVerified: false,
     });
     const next = await generateEd25519KeyPair('dev-next');
     ring.rotate(next);
     await expect(ring.verifyAccessToken(token)).resolves.toMatchObject({
       sub: 'u',
       sid: 's',
+      emailVerified: false,
     });
     const fresh = await ring.signAccessToken({
       sub: 'u2',
       sid: 's2',
       scope: ['user'],
+      emailVerified: true,
     });
     await expect(ring.verifyAccessToken(fresh)).resolves.toMatchObject({
       sub: 'u2',
+      emailVerified: true,
     });
   });
 });

@@ -17,6 +17,7 @@ import { HealthService } from '@social/platform-telemetry';
 import { AuthController } from './auth/auth.controller';
 import { ContentController } from './content/content.controller';
 import { AuthGuard } from './auth/auth.guard';
+import { EmailVerifiedGuard } from './auth/email-verified.guard';
 import { JwtVerifier } from './auth/jwt-verifier';
 import { HealthController } from './health.controller';
 import { MetricsController } from './metrics.controller';
@@ -138,6 +139,7 @@ import {
         new AuthGuard(verifier, revocation),
     },
     RateLimitGuard,
+    EmailVerifiedGuard,
   ],
 })
 export class AppModule {}

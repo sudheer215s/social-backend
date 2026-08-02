@@ -2,7 +2,7 @@
   "name": "social-backend",
   "version": "0.0.1",
   "private": true,
-  "description": "Distributed Social Media Backend \u2014 NestJS monorepo",
+  "description": "Distributed Social Media Backend — NestJS monorepo",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.0.0"
@@ -50,7 +50,19 @@
     "k8s:secrets:eso": "kubectl apply -k deploy/k8s/external-secrets",
     "k8s:keda": "kubectl apply -k deploy/k8s/components/keda-scaling",
     "k8s:monitoring": "kubectl apply -k deploy/k8s/monitoring",
-    "argocd:apply": "kubectl apply -f deploy/argocd/application-dev.yaml -f deploy/argocd/application-prod.yaml"
+    "argocd:apply": "kubectl apply -f deploy/argocd/application-dev.yaml -f deploy/argocd/application-prod.yaml",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/**/*.{ts,tsx}": [
+      "eslint --fix --max-warnings=0"
+    ],
+    "libs/**/*.{ts,tsx}": [
+      "eslint --fix --max-warnings=0"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -59,6 +71,8 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.4.2",
     "turbo": "^2.5.4",
     "typescript": "^5.7.3",

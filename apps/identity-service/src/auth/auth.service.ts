@@ -97,7 +97,7 @@ export class AuthService {
         );
         const tokens = await this.sessions.issueSession(
           userId,
-          undefined,
+          { emailVerified: u.email_verified },
           client,
         );
         // No email/PII in the public search index payload
@@ -174,7 +174,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.sessions.issueSession(row.id);
+    const tokens = await this.sessions.issueSession(row.id, {
+      emailVerified: row.email_verified,
+    });
     return { user: mapUser(row), tokens };
   }
 
