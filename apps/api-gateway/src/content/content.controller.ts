@@ -479,11 +479,13 @@ export class ContentController {
   home(
     @Req() req: AuthedRequest,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
     @Query('before') before?: string,
   ) {
     const authorization = this.bearer(req);
     const q = new URLSearchParams();
     if (limit) q.set('limit', limit);
+    if (cursor) q.set('cursor', cursor);
     if (before) q.set('before', before);
     const qs = q.toString() ? `?${q}` : '';
     return this.forward(
@@ -497,14 +499,21 @@ export class ContentController {
 
   @Get('v1/notifications')
   @UseGuards(AuthGuard)
-  listNotifications(@Req() req: AuthedRequest, @Query('limit') limit?: string) {
+  listNotifications(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
     const authorization = this.bearer(req);
-    const q = limit ? `?limit=${encodeURIComponent(limit)}` : '';
+    const q = new URLSearchParams();
+    if (limit) q.set('limit', limit);
+    if (cursor) q.set('cursor', cursor);
+    const qs = q.toString() ? `?${q}` : '';
     return this.forward(
       'NOTIFICATION_BASE_URL',
       'http://127.0.0.1:3005',
       'GET',
-      `/v1/notifications${q}`,
+      `/v1/notifications${qs}`,
       authorization ? { authorization } : {},
     );
   }

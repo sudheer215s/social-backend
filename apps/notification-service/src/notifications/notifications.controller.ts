@@ -18,13 +18,18 @@ export class NotificationsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async list(@Req() req: AuthedRequest, @Query('limit') limit?: string) {
-    const items = await this.notifications.listForUser(
+  async list(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const page = await this.notifications.listForUser(
       req.userId!,
       limit ? Number(limit) : 30,
+      cursor,
     );
     const unreadCount = await this.notifications.unreadCount(req.userId!);
-    return { items, unreadCount };
+    return { items: page.items, page: page.page, unreadCount };
   }
 
   @Get('unread-count')

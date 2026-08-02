@@ -5,8 +5,7 @@ import { applyMigrations } from '../db/migrate';
 import { NotificationsService } from './notifications.service';
 
 const connectionString =
-  process.env.DATABASE_URL ??
-  'postgres://social:social@127.0.0.1:6432/social';
+  process.env.DATABASE_URL ?? 'postgres://social:social@127.0.0.1:6432/social';
 
 describe('NotificationsService (integration)', () => {
   const pool = createPool({ connectionString, max: 3 });
@@ -54,7 +53,7 @@ describe('NotificationsService (integration)', () => {
       payload: { followerId: actor2, followeeId: recipient },
     });
 
-    const list = await svc.listForUser(recipient);
+    const list = (await svc.listForUser(recipient)).items;
     expect(list.length).toBeGreaterThanOrEqual(1);
     const follow = list.find((n) => n.type === 'follow');
     expect(follow?.actorCount).toBeGreaterThanOrEqual(2);
@@ -78,7 +77,7 @@ describe('NotificationsService (integration)', () => {
       eventType: 'post.liked',
       payload: { postId, authorId: author, userId: actor2 },
     });
-    const list = await svc.listForUser(author);
+    const list = (await svc.listForUser(author)).items;
     const like = list.find((n) => n.type === 'like' && n.entityId === postId);
     expect(like?.actorCount).toBeGreaterThanOrEqual(2);
   });

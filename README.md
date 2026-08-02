@@ -23,8 +23,8 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
 | Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, private authz, **cursor author feed**                 |
 | Graph         | Follow/unfollow, follow requests, blocks, mutes, **cursor pagination** on follower lists, cascade on erase                           |
-| Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter at hydration                                                |
-| Notifications | Follow/like/follow_request aggregation, Redis stream pointers, block/mute suppress                                                   |
+| Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter, **cursor home timeline**                                   |
+| Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                             |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
 | Observability | HTTP RED metrics; **X-Request-Id** + optional `traceparent` propagation                                                              |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Wire `TRUSTED_PROXIES` and real registry digests per environment when deploying. Cursor pagination not yet on every collection (timeline, notifications).
+Wire `TRUSTED_PROXIES` and real registry digests per environment when deploying.
 
 ---
 
@@ -221,7 +221,9 @@ Gateway propagates these headers to upstream services. Logs can join on `X-Reque
 ```http
 GET /v1/posts?authorId=…&limit=20&cursor=…
 GET /v1/graph/followers/:userId?limit=50&cursor=…
-→ { "posts"|"items": […], "page": { "next_cursor": "…"|null, "has_more": true|false } }
+GET /v1/timelines/home?limit=20&cursor=…          # also accepts legacy ?before=<postId>
+GET /v1/notifications?limit=30&cursor=…
+→ { …, "page": { "next_cursor": "…"|null, "has_more": true|false } }
 ```
 
 Realtime tickets: **20/min per user** (`TICKET_RATE_LIMIT` / `TICKET_RATE_WINDOW_SEC`).

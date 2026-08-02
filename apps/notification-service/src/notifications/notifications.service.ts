@@ -1,6 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { Pool } from 'pg';
-import { withTransaction } from '@social/platform-db';
+import {
+  decodeCursor,
+  paginateRows,
+  type PageMeta,
+  withTransaction,
+} from '@social/platform-db';
 import type { RedisClient } from '@social/platform-redis';
 import { uuidv7 } from 'uuidv7';
 import { publishNotificationPointer } from './delivery-stream';
@@ -129,17 +134,37 @@ export class NotificationsService {
     return outcome.status;
   }
 
-  async listForUser(userId: string, limit = 30): Promise<NotificationDto[]> {
+  async listForUser(
+    userId: string,
+    limit = 30,
+    cursor?: string,
+  ): Promise<{ items: NotificationDto[]; page: PageMeta }> {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    let beforeId: string | null = null;
+    if (cursor) {
+      try {
+        const c = decodeCursor<{ id?: string }>(cursor);
+        beforeId = typeof c.id === 'string' ? c.id : null;
+        if (!beforeId) throw new Error('invalid_cursor');
+      } catch {
+        throw new BadRequestException('Invalid cursor');
+      }
+    }
     const rows = await this.pool.query(
       `SELECT id, user_id, type, entity_type, entity_id, actor_ids, actor_count,
               group_key, is_read, created_at, updated_at
        FROM notification.notifications
        WHERE user_id = $1
+         AND ($2::uuid IS NULL OR id < $2::uuid)
        ORDER BY id DESC
-       LIMIT $2`,
-      [userId, Math.min(Math.max(limit, 1), 100)],
+       LIMIT $3`,
+      [userId, beforeId, safeLimit + 1],
     );
-    return (rows.rows as NotifRow[]).map(mapRow);
+    const mapped = (rows.rows as NotifRow[]).map(mapRow);
+    const { items, page } = paginateRows(mapped, safeLimit, (n) => ({
+      id: n.id,
+    }));
+    return { items, page };
   }
 
   async unreadCount(userId: string): Promise<number> {
