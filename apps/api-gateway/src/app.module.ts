@@ -27,6 +27,7 @@ import { IdentityGrpcClient } from './proxy/identity.grpc.client';
 import { IdentityProxy } from './proxy/identity.proxy';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
 import { TicketRateLimitGuard } from './rate-limit/ticket-rate-limit.guard';
+import { WriteRateLimitGuard } from './rate-limit/write-rate-limit.guard';
 import {
   IDEMPOTENCY_STORE,
   RATE_LIMITER,
@@ -147,6 +148,7 @@ import { VersionController } from './version/version.controller';
     },
     RateLimitGuard,
     TicketRateLimitGuard,
+    WriteRateLimitGuard,
     EmailVerifiedGuard,
     {
       provide: APP_FILTER,

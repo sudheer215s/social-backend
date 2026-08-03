@@ -31,14 +31,34 @@ export class PostsController {
   }
 
   @Get('batch')
-  async batch(@Query('ids') ids?: string) {
+  @UseGuards(OptionalJwtAuthGuard)
+  async batch(
+    @Req() req: AuthedRequest,
+    @Query('ids') ids?: string,
+    @Query('viewerId') viewerIdQuery?: string,
+  ) {
     const list = (ids ?? '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
       .slice(0, 100);
-    const posts = await this.posts.getByIds(list);
+    // Prefer authenticated viewer; allow internal hydrate with viewerId query
+    // (timeline-service) when no JWT is present.
+    const viewerId = req.userId ?? viewerIdQuery;
+    const posts = await this.posts.getByIds(list, viewerId);
     return { posts };
+  }
+
+  @Get('viewer-states')
+  @UseGuards(JwtAuthGuard)
+  async viewerStates(@Req() req: AuthedRequest, @Query('ids') ids?: string) {
+    const list = (ids ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 100);
+    const states = await this.posts.getViewerStates(req.userId!, list);
+    return { states };
   }
 
   @Get(':id/replies')

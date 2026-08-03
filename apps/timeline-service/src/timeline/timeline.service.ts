@@ -110,8 +110,12 @@ export class TimelineService {
     limit = 20,
   ): Promise<{ posts: unknown[]; filtered: number }> {
     if (postIds.length === 0) return { posts: [], filtered: 0 };
+    const q = new URLSearchParams({
+      ids: postIds.join(','),
+      viewerId,
+    });
     const res = await fetch(
-      `${this.postBaseUrl}/v1/posts/batch?ids=${encodeURIComponent(postIds.join(','))}`,
+      `${this.postBaseUrl}/v1/posts/batch?${q.toString()}`,
     );
     if (!res.ok) return { posts: [], filtered: 0 };
     const json = (await res.json()) as {

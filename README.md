@@ -21,14 +21,14 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Area          | Capabilities                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
-| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, private authz, **cursor author feed**                 |
+| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, **viewerLiked/viewerReposted**, cursor feeds          |
 | Graph         | Follow/unfollow, follow requests, blocks, mutes, **cursor pagination** on follower lists, cascade on erase                           |
 | Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter, **cursor home timeline**                                   |
 | Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                             |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
 | Observability | HTTP RED metrics; **X-Request-Id** + optional `traceparent` propagation                                                              |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
-| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, **RFC 9457**, CORS/security headers, OpenAPI)         |
+| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, RFC 9457, **write velocity limits**, OpenAPI)         |
 
 ### Explicit non-goals (v2 design)
 
@@ -184,6 +184,18 @@ GET  /v1/posts/:id/thread
 - Upstream budget: `UPSTREAM_TIMEOUT_MS` (default **5000** → 504 on timeout).
 - Spec: `GET /v1/openapi.json`. Version: `GET /v1/version` (`APP_VERSION` / `GIT_COMMIT`).
 - Logout everywhere: `POST /v1/auth/logout-all` (Bearer) revokes all sessions + clears `rt` cookie.
+- Write velocity (per user): create post **30/h**, like **500/h**, follow **100/day** (env-tunable).
+
+### Viewer state on posts
+
+Authenticated reads attach:
+
+```json
+{ "post": { "id": "…", "viewerLiked": true, "viewerReposted": false, … } }
+```
+
+Also: `GET /v1/posts/viewer-states?ids=id1,id2` → `{ "states": { "<id>": { "liked", "reposted" } } }`.
+Home timeline hydration passes `viewerId` into post batch so feed cards get the same flags.
 
 ### Metrics (RED)
 

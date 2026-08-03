@@ -25,6 +25,7 @@ import type { AuthedRequest } from '../auth/auth.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { EmailVerifiedGuard } from '../auth/email-verified.guard';
 import { TicketRateLimitGuard } from '../rate-limit/ticket-rate-limit.guard';
+import { WriteRateLimitGuard } from '../rate-limit/write-rate-limit.guard';
 import { IDEMPOTENCY_STORE } from '../tokens';
 import { fetchUpstream } from '../proxy/upstream';
 
@@ -87,7 +88,7 @@ export class ContentController {
    * double-publish. Replays return the stored body with `Idempotent-Replay: true`.
    */
   @Post('v1/posts')
-  @UseGuards(AuthGuard, EmailVerifiedGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard, WriteRateLimitGuard)
   async createPost(
     @Req() req: AuthedRequest,
     @Body() body: unknown,
@@ -254,6 +255,20 @@ export class ContentController {
     );
   }
 
+  @Get('v1/posts/viewer-states')
+  @UseGuards(AuthGuard)
+  viewerStates(@Req() req: AuthedRequest, @Query('ids') ids?: string) {
+    const authorization = this.bearer(req);
+    const q = ids ? `?ids=${encodeURIComponent(ids)}` : '';
+    return this.forward(
+      'POST_BASE_URL',
+      'http://127.0.0.1:3002',
+      'GET',
+      `/v1/posts/viewer-states${q}`,
+      authorization ? { authorization } : {},
+    );
+  }
+
   @Get('v1/posts/:id')
   getPost(@Req() req: AuthedRequest, @Param('id') id: string) {
     const authorization = this.bearer(req);
@@ -281,7 +296,7 @@ export class ContentController {
   }
 
   @Post('v1/posts/:id/likes')
-  @UseGuards(AuthGuard, EmailVerifiedGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard, WriteRateLimitGuard)
   like(@Req() req: AuthedRequest, @Param('id') id: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -294,7 +309,7 @@ export class ContentController {
   }
 
   @Delete('v1/posts/:id/likes')
-  @UseGuards(AuthGuard, EmailVerifiedGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard, WriteRateLimitGuard)
   unlike(@Req() req: AuthedRequest, @Param('id') id: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -307,7 +322,7 @@ export class ContentController {
   }
 
   @Post('v1/graph/follows/:userId')
-  @UseGuards(AuthGuard, EmailVerifiedGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard, WriteRateLimitGuard)
   follow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);
     return this.forward(
@@ -320,7 +335,7 @@ export class ContentController {
   }
 
   @Delete('v1/graph/follows/:userId')
-  @UseGuards(AuthGuard, EmailVerifiedGuard)
+  @UseGuards(AuthGuard, EmailVerifiedGuard, WriteRateLimitGuard)
   @HttpCode(204)
   unfollow(@Req() req: AuthedRequest, @Param('userId') userId: string) {
     const authorization = this.bearer(req);

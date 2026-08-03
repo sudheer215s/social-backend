@@ -46,6 +46,12 @@ describe('PostsService (integration)', () => {
     const likedAgain = await posts.like(created.id, otherId);
     expect(likedAgain.likeCount).toBe(1);
 
+    const withViewer = await posts.getById(created.id, otherId);
+    expect(withViewer.viewerLiked).toBe(true);
+    expect(withViewer.viewerReposted).toBe(false);
+    const states = await posts.getViewerStates(otherId, [created.id]);
+    expect(states[created.id]?.liked).toBe(true);
+
     const likeOutbox = await pool.query<{ event_type: string; c: string }>(
       `SELECT event_type, count(*)::text AS c FROM post.outbox
        WHERE aggregate_id = $1 AND event_type = 'post.liked'

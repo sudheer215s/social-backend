@@ -38,6 +38,15 @@ export interface PostDto {
   repostCount: number;
   createdAt: Date;
   mentions?: MentionDto[];
+  /** Present when a viewer id was supplied on the read path. */
+  viewerLiked?: boolean;
+  /** Present when a viewer id was supplied on the read path. */
+  viewerReposted?: boolean;
+}
+
+export interface ViewerState {
+  liked: boolean;
+  reposted: boolean;
 }
 
 const POST_SELECT = `id, author_id, content, media_refs, reply_to_id, thread_root_id,
@@ -426,11 +435,15 @@ export class PostsService {
     await this.assertCanViewAuthor(p.author_id, viewerId);
     const post = mapPost(p);
     post.mentions = await this.loadMentions(postId);
+    await this.attachViewerStates([post], viewerId);
     return post;
   }
 
-  /** Internal hydrate — no visibility check (caller already authorized). */
-  async getByIds(ids: string[]): Promise<PostDto[]> {
+  /**
+   * Hydrate by ids. Optional viewerId attaches liked/reposted flags.
+   * No visibility check — timeline/gateway already authorized the viewer.
+   */
+  async getByIds(ids: string[], viewerId?: string): Promise<PostDto[]> {
     if (ids.length === 0) return [];
     const rows = await this.pool.query(
       `SELECT ${POST_SELECT}
@@ -441,7 +454,63 @@ export class PostsService {
     const byId = new Map(
       (rows.rows as PostRow[]).map((r) => [r.id, mapPost(r)]),
     );
-    return ids.map((id) => byId.get(id)).filter((p): p is PostDto => !!p);
+    const posts = ids
+      .map((id) => byId.get(id))
+      .filter((p): p is PostDto => !!p);
+    await this.attachViewerStates(posts, viewerId);
+    return posts;
+  }
+
+  /** Batch viewer state for a set of post ids (≤100). */
+  async getViewerStates(
+    viewerId: string,
+    postIds: string[],
+  ): Promise<Record<string, ViewerState>> {
+    const ids = [...new Set(postIds)].slice(0, 100);
+    const out: Record<string, ViewerState> = {};
+    for (const id of ids) {
+      out[id] = { liked: false, reposted: false };
+    }
+    if (ids.length === 0) return out;
+
+    const liked = await this.pool.query<{ post_id: string }>(
+      `SELECT post_id FROM post.likes
+       WHERE user_id = $1 AND post_id = ANY($2::uuid[])`,
+      [viewerId, ids],
+    );
+    for (const r of liked.rows) {
+      const s = out[r.post_id];
+      if (s) s.liked = true;
+    }
+
+    const reposted = await this.pool.query<{ repost_of_id: string }>(
+      `SELECT DISTINCT repost_of_id FROM post.posts
+       WHERE author_id = $1
+         AND deleted_at IS NULL
+         AND repost_of_id = ANY($2::uuid[])`,
+      [viewerId, ids],
+    );
+    for (const r of reposted.rows) {
+      const s = out[r.repost_of_id];
+      if (s) s.reposted = true;
+    }
+    return out;
+  }
+
+  private async attachViewerStates(
+    posts: PostDto[],
+    viewerId?: string,
+  ): Promise<void> {
+    if (!viewerId || posts.length === 0) return;
+    const states = await this.getViewerStates(
+      viewerId,
+      posts.map((p) => p.id),
+    );
+    for (const p of posts) {
+      const s = states[p.id];
+      p.viewerLiked = s?.liked ?? false;
+      p.viewerReposted = s?.reposted ?? false;
+    }
   }
 
   async listByAuthor(
@@ -475,6 +544,7 @@ export class PostsService {
     const { items, page } = paginateRows(mapped, safeLimit, (p) => ({
       id: p.id,
     }));
+    await this.attachViewerStates(items, viewerId);
     return { posts: items, page };
   }
 
@@ -500,7 +570,9 @@ export class PostsService {
        LIMIT $2`,
       [parentId, safeLimit],
     );
-    return (rows.rows as PostRow[]).map(mapPost);
+    const posts = (rows.rows as PostRow[]).map(mapPost);
+    await this.attachViewerStates(posts, viewerId);
+    return posts;
   }
 
   async getThread(
@@ -540,10 +612,10 @@ export class PostsService {
        LIMIT $2`,
       [rootId, safeLimit],
     );
-    return {
-      root,
-      posts: (rows.rows as PostRow[]).map(mapPost),
-    };
+    const posts = (rows.rows as PostRow[]).map(mapPost);
+    const withStates = root ? [root, ...posts] : posts;
+    await this.attachViewerStates(withStates, viewerId);
+    return { root, posts };
   }
 
   private async loadMentions(postId: string): Promise<MentionDto[]> {
