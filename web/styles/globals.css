@@ -41,6 +41,18 @@
   --success: 74 222 128;
 }
 
+/* Motion — global reduced-motion so components cannot forget it.
+ * @see docs/frontend/04-modules/design-system.md §5 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;

@@ -1,3 +1,5 @@
+import { Button } from '@/ui';
+
 /**
  * Logged-out landing (static). Authenticated home lives under (app)/home.
  * @see docs/frontend/01-architecture.md §7
@@ -12,18 +14,12 @@ export default function LandingPage() {
         <p className="text-fg-muted">A distributed social media client.</p>
       </div>
       <nav aria-label="Account" className="flex flex-wrap gap-3">
-        <a
-          href="/login"
-          className="inline-flex min-h-tap min-w-tap items-center justify-center rounded-DEFAULT bg-accent px-4 text-sm font-medium text-accent-fg no-underline hover:opacity-90"
-        >
-          Log in
-        </a>
-        <a
-          href="/register"
-          className="inline-flex min-h-tap min-w-tap items-center justify-center rounded-DEFAULT border border-border bg-bg-subtle px-4 text-sm font-medium text-fg no-underline hover:bg-bg-inset"
-        >
-          Sign up
-        </a>
+        <Button asChild variant="primary">
+          <a href="/login">Log in</a>
+        </Button>
+        <Button asChild variant="secondary">
+          <a href="/register">Sign up</a>
+        </Button>
       </nav>
     </main>
   );
