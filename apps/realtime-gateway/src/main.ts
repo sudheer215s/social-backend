@@ -3,13 +3,16 @@ import type { RedisClient } from '@social/platform-redis';
 import {
   createLogger,
   httpMetricsMiddleware,
+  httpTracingMiddleware,
   requestContextMiddleware,
+  startTracing,
 } from '@social/platform-telemetry';
 import { AppModule, REDIS } from './app.module';
 import { attachRealtimeWebSocket } from './realtime/ws.gateway';
 import { TicketService } from './ticket/ticket.service';
 
 async function bootstrap(): Promise<void> {
+  startTracing(process.env.SERVICE_NAME ?? 'realtime-gateway');
   const log = createLogger({
     serviceName: process.env.SERVICE_NAME ?? 'realtime-gateway',
     level: 'info',
@@ -18,6 +21,7 @@ async function bootstrap(): Promise<void> {
     logger: ['error', 'warn', 'log'],
   });
   app.use(requestContextMiddleware());
+  app.use(httpTracingMiddleware());
   app.use(httpMetricsMiddleware());
   const port = process.env.PORT ?? '3007';
   await app.listen(port);

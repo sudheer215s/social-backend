@@ -80,6 +80,11 @@ export class PostsService {
     const resolvedMentions = await this.resolveMentions(mentionUsernames);
     const authorVisibility = await this.fetchUserVisibility(authorId);
 
+    // Abuse: identical non-empty body from same author within the window → 409.
+    if (content.length > 0 && !replyToId) {
+      await this.assertNotDuplicateContent(authorId, content);
+    }
+
     return withTransaction(this.pool, async (client) => {
       if (replyToId) {
         // Design: reply to deleted is allowed (thread shows a tombstone for parent).
@@ -337,6 +342,38 @@ export class PostsService {
   /**
    * Resolve usernames via identity (deadline ~300ms each, failure → unresolved).
    */
+  /**
+   * Reject near-identical repost spam: same author + exact content within N hours
+   * (default 24). Pure reposts (empty body) are excluded.
+   */
+  private async assertNotDuplicateContent(
+    authorId: string,
+    content: string,
+  ): Promise<void> {
+    if (process.env.POST_DUPLICATE_DETECT === '0') return;
+    const hours = Number(process.env.POST_DUPLICATE_WINDOW_HOURS ?? 24);
+    const windowHours =
+      Number.isFinite(hours) && hours > 0 ? Math.min(hours, 168) : 24;
+    const existing = await this.pool.query<{ id: string }>(
+      `SELECT id FROM post.posts
+       WHERE author_id = $1
+         AND content = $2
+         AND deleted_at IS NULL
+         AND reply_to_id IS NULL
+         AND created_at > now() - ($3::text || ' hours')::interval
+       LIMIT 1`,
+      [authorId, content, String(windowHours)],
+    );
+    if ((existing.rowCount ?? 0) > 0) {
+      throw new ConflictException({
+        type: 'https://api.social.example.com/problems/duplicate-content',
+        title: 'Duplicate content',
+        status: 409,
+        detail: `Identical post body within the last ${windowHours} hours`,
+      });
+    }
+  }
+
   private async resolveMentions(
     usernames: string[],
   ): Promise<{ username: string; userId: string | null }[]> {

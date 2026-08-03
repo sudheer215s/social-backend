@@ -76,12 +76,23 @@ export function outboundRequestHeaders(
   extra: Record<string, string> = {},
 ): Record<string, string> {
   const ctx = getRequestContext();
-  const headers = { ...extra };
+  let headers = { ...extra };
   if (ctx?.requestId) {
     headers['x-request-id'] = ctx.requestId;
   }
   if (ctx?.traceparent) {
     headers.traceparent = ctx.traceparent;
+  }
+  // Prefer live OTel context when tracing is active (overwrites stale inbound).
+  try {
+    // Lazy require to avoid hard cycle at module load
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { injectTraceHeaders } = require('./tracing') as {
+      injectTraceHeaders: (h: Record<string, string>) => Record<string, string>;
+    };
+    headers = injectTraceHeaders(headers);
+  } catch {
+    // tracing module unavailable
   }
   return headers;
 }

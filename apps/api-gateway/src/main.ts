@@ -2,7 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import {
   createLogger,
   httpMetricsMiddleware,
+  httpTracingMiddleware,
   requestContextMiddleware,
+  startTracing,
 } from '@social/platform-telemetry';
 import {
   createRedisClient,
@@ -21,6 +23,7 @@ import {
 
 async function bootstrap(): Promise<void> {
   const serviceName = process.env.SERVICE_NAME ?? 'api-gateway';
+  startTracing(serviceName);
   const log = createLogger({
     serviceName,
     level: (process.env.LOG_LEVEL as 'info') ?? 'info',
@@ -61,6 +64,7 @@ async function bootstrap(): Promise<void> {
 
   // Correlation first so metrics/rate-limit see the same request id context.
   app.use(requestContextMiddleware());
+  app.use(httpTracingMiddleware());
   app.use(securityHeadersMiddleware());
   app.use(httpMetricsMiddleware());
 

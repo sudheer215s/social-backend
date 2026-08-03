@@ -30,7 +30,8 @@ describe('HealthController', () => {
       status: 'ok',
       checks: { self: 'up' },
     });
-    expect(status).not.toHaveBeenCalled();
+    // Ready always sets an explicit status (200 when ok / degraded).
+    expect(status).toHaveBeenCalledWith(200);
   });
 
   it('ready sets 503 when unavailable', async () => {

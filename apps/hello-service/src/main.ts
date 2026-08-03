@@ -4,7 +4,7 @@ import {
   configToJSON,
   loadConfig,
 } from '@social/platform-config';
-import { createLogger } from '@social/platform-telemetry';
+import { createLogger, startTracing } from '@social/platform-telemetry';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -21,6 +21,7 @@ async function bootstrap(): Promise<void> {
     throw err;
   }
 
+  startTracing(config.SERVICE_NAME);
   const log = createLogger({
     serviceName: config.SERVICE_NAME,
     level: config.LOG_LEVEL,

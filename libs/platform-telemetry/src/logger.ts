@@ -1,5 +1,6 @@
 import pino, { type Logger, type LoggerOptions } from 'pino';
 import { redactSensitive } from './redact';
+import { getRequestContext } from './request-context';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
@@ -12,6 +13,7 @@ export interface CreateLoggerOptions {
 
 /**
  * Structured JSON logger with automatic sensitive-field redaction.
+ * When a request is in flight, attaches requestId from AsyncLocalStorage.
  */
 export function createLogger(options: CreateLoggerOptions): Logger {
   const level = options.level ?? 'info';
@@ -20,6 +22,14 @@ export function createLogger(options: CreateLoggerOptions): Logger {
     level,
     base: {
       service: options.serviceName,
+    },
+    mixin() {
+      const ctx = getRequestContext();
+      if (!ctx?.requestId) return {};
+      return {
+        requestId: ctx.requestId,
+        ...(ctx.traceparent ? { traceparent: ctx.traceparent } : {}),
+      };
     },
     formatters: {
       level(label) {

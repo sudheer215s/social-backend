@@ -42,3 +42,9 @@ export {
   sanitizeRequestId,
   type RequestContext,
 } from './request-context';
+export {
+  startTracing,
+  isTracingEnabled,
+  httpTracingMiddleware,
+  injectTraceHeaders,
+} from './tracing';

@@ -8,7 +8,9 @@ import {
 import {
   createLogger,
   httpMetricsMiddleware,
+  httpTracingMiddleware,
   requestContextMiddleware,
+  startTracing,
 } from '@social/platform-telemetry';
 import path from 'node:path';
 import { AppModule } from './app.module';
@@ -26,6 +28,7 @@ async function bootstrap(): Promise<void> {
     throw err;
   }
 
+  startTracing(process.env.SERVICE_NAME ?? 'identity-service');
   const log = createLogger({
     serviceName: config.SERVICE_NAME,
     level: config.LOG_LEVEL,
@@ -36,6 +39,7 @@ async function bootstrap(): Promise<void> {
     logger: ['error', 'warn', 'log'],
   });
   app.use(requestContextMiddleware());
+  app.use(httpTracingMiddleware());
   app.use(httpMetricsMiddleware());
 
   const grpcUrl = process.env.IDENTITY_GRPC_URL ?? '0.0.0.0:50051';

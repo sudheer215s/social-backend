@@ -26,7 +26,7 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter, **cursor home timeline**                                   |
 | Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                             |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
-| Observability | HTTP RED metrics; **X-Request-Id** + optional `traceparent` propagation                                                              |
+| Observability | HTTP RED; **X-Request-Id** in logs; **OTLP traces** to Jaeger when collector is up                                                   |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
 | Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, RFC 9457, **write velocity limits**, OpenAPI)         |
 
@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing.
+Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing. Full auto-instrumentation (DB/Kafka) optional later.
 
 ---
 
@@ -231,14 +231,20 @@ Idempotency-Key: <client-generated unique key>
 
 Retries with the same key + body return the original response (`Idempotent-Replay: true`). Same key + different body → `422`. Concurrent in-flight → `409`. Server 5xx drops the key so a genuine retry can proceed. Stored in Redis (24h). Set `IDEMPOTENCY_OPTIONAL=1` only for local break-glass.
 
-### Request correlation & pagination
+### Request correlation, tracing & pagination
 
 ```http
 X-Request-Id: <echoed or generated>
-traceparent: 00-<traceid>-<spanid>-<flags>   # accepted & forwarded when valid
+traceparent: 00-<traceid>-<spanid>-<flags>   # accepted, spanned, and forwarded
 ```
 
-Gateway propagates these headers to upstream services. Logs can join on `X-Request-Id`.
+- Gateway/services propagate `X-Request-Id` + W3C `traceparent` upstream.
+- Logs include `requestId` from ALS when a request is in flight.
+- When `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Compose: `http://otel-collector:4318` or host `http://127.0.0.1:4318`), each HTTP request exports a SERVER span to the collector → **Jaeger** (`http://127.0.0.1:16686`). Disable with `OTEL_SDK_DISABLED=1`.
+
+### Duplicate post guard
+
+Identical non-empty top-level content from the same author within **24h** returns **409** with `type` `…/problems/duplicate-content` (`POST_DUPLICATE_WINDOW_HOURS`, disable with `POST_DUPLICATE_DETECT=0`).
 
 ```http
 GET /v1/posts?authorId=…&limit=20&cursor=…
