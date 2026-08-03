@@ -8,7 +8,7 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 | F0-T01 | F0    | Scaffold `web/` Next.js 15 App Router in monorepo            | `pnpm --filter @social/web typecheck/test/build` green; landing page compiles | done   |
 | F0-T02 | F0    | Tailwind + design tokens (CSS vars, light/dark)              | Token contrast unit test; `globals.css` matches design-system §2              | done   |
 | F0-T03 | F0    | ESLint six-layer boundaries + ban `fetch` outside api-client | Lint fails on deliberate layer violation and stray `fetch`                    | done   |
-| F0-T04 | F0    | OpenAPI → TypeScript types (`pnpm api:types`)                | Generated types from committed spec; CI-ready script                          | todo   |
+| F0-T04 | F0    | OpenAPI → TypeScript types (`pnpm api:types`)                | Generated types from committed spec; CI-ready script                          | done   |
 | F0-T05 | F0    | api-client: `ApiError` / `NetworkError` + token store        | Unit tests: expiry margin, clear, synthetic problem                           | todo   |
 | F0-T06 | F0    | api-client: request pipeline (deadline, retry, X-Degraded)   | Unit tests: retry policy, header side channel                                 | todo   |
 | F0-T07 | F0    | Single-flight refresh + cross-tab lock                       | **20 parallel 401s → exactly one refresh**                                    | todo   |
@@ -18,8 +18,8 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 
 ## Active next
 
-1. F0-T04 (OpenAPI types)
-2. F0-T05 → F0-T07 (api-client + single-flight refresh)
+1. F0-T05 (errors + tokens)
+2. F0-T06–T07 (pipeline + single-flight refresh)
 
 ## Notes
 

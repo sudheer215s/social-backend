@@ -13,11 +13,11 @@ Phase F0 (Foundation) — in progress.
 | ------ | ------------------------ | --------------------------------------------------------------- |
 | F0-T01 | Scaffold `@social/web`   | Next.js 15 App Router, Vitest, monorepo workspace, landing page |
 | F0-T02 | Tailwind + design tokens | CSS vars light/dark; WCAG AA contrast unit tests                |
+| F0-T03 | ESLint layer boundaries  | no-restricted-imports + ban fetch; assert script                |
+| F0-T04 | OpenAPI → TS types       | `openapi/openapi.json` + `web/api-client/generated/schema.ts`   |
 
 ### Active next
 
-- F0-T03 ESLint layer boundaries
-- F0-T04 OpenAPI types
 - F0-T05–T07 api-client + single-flight refresh (F0 acceptance)
 
 ### Run

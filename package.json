@@ -44,6 +44,7 @@
     "deploy:check": "node scripts/verify-deploy-config.mjs",
     "routes:list": "node scripts/list-routes.mjs",
     "openapi:export": "node scripts/export-openapi.mjs",
+    "api:types": "mkdir -p openapi && node scripts/export-openapi.mjs --out=openapi/openapi.json && pnpm --filter @social/web api:types",
     "k8s:apply": "kubectl apply -k deploy/k8s/",
     "k8s:apply:dev": "kubectl apply -k deploy/k8s/overlays/dev",
     "k8s:apply:prod": "kubectl apply -k deploy/k8s/overlays/prod",

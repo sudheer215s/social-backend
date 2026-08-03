@@ -1,0 +1,2386 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Social Backend API",
+    "version": "0.1.0",
+    "description": "Generated from Nest controller static scan. Schemas are placeholders."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "API gateway (local)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "api-gateway"
+    },
+    {
+      "name": "graph-service"
+    },
+    {
+      "name": "hello-service"
+    },
+    {
+      "name": "identity-service"
+    },
+    {
+      "name": "notification-service"
+    },
+    {
+      "name": "post-service"
+    },
+    {
+      "name": "realtime-gateway"
+    },
+    {
+      "name": "search-service"
+    },
+    {
+      "name": "timeline-service"
+    }
+  ],
+  "paths": {
+    "/v1/auth/register": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/register",
+        "operationId": "identity-service_post__v1_auth_register",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/login",
+        "operationId": "identity-service_post__v1_auth_login",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/refresh",
+        "operationId": "identity-service_post__v1_auth_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/logout",
+        "operationId": "identity-service_post__v1_auth_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/logout-all": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/logout-all",
+        "operationId": "identity-service_post__v1_auth_logout_all",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/verify-email": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/verify-email",
+        "operationId": "identity-service_post__v1_auth_verify_email",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password/forgot": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/password/forgot",
+        "operationId": "identity-service_post__v1_auth_password_forgot",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password/reset": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/auth/password/reset",
+        "operationId": "identity-service_post__v1_auth_password_reset",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/jwks": {
+      "get": {
+        "tags": ["identity-service"],
+        "summary": "GET /v1/auth/jwks",
+        "operationId": "identity-service_get__v1_auth_jwks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts"
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "tags": ["identity-service"],
+        "summary": "GET /.well-known/jwks.json",
+        "operationId": "identity-service_get__well_known_jwks_json",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/auth/auth.controller.ts"
+      }
+    },
+    "/v1/users/me/export": {
+      "get": {
+        "tags": ["api-gateway"],
+        "summary": "GET /v1/users/me/export",
+        "operationId": "api-gateway_get__v1_users_me_export",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/api-gateway/src/auth/auth.controller.ts"
+      }
+    },
+    "/v1/reports": {
+      "post": {
+        "tags": ["identity-service"],
+        "summary": "POST /v1/reports",
+        "operationId": "identity-service_post__v1_reports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/reports/reports.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/reports": {
+      "get": {
+        "tags": ["identity-service"],
+        "summary": "GET /v1/admin/reports",
+        "operationId": "identity-service_get__v1_admin_reports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/reports/reports.controller.ts"
+      }
+    },
+    "/v1/admin/reports/{id}": {
+      "patch": {
+        "tags": ["identity-service"],
+        "summary": "PATCH /v1/admin/reports/{id}",
+        "operationId": "identity-service_patch__v1_admin_reports_id_",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/reports/reports.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me": {
+      "get": {
+        "tags": ["identity-service"],
+        "summary": "GET /v1/users/me",
+        "operationId": "identity-service_get__v1_users_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/users/users.controller.ts"
+      },
+      "patch": {
+        "tags": ["identity-service"],
+        "summary": "PATCH /v1/users/me",
+        "operationId": "identity-service_patch__v1_users_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/users/users.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["identity-service"],
+        "summary": "DELETE /v1/users/me",
+        "operationId": "identity-service_delete__v1_users_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/users/users.controller.ts"
+      }
+    },
+    "/v1/users/by-username/{username}": {
+      "get": {
+        "tags": ["identity-service"],
+        "summary": "GET /v1/users/by-username/{username}",
+        "operationId": "identity-service_get__v1_users_by_username_username_",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/users/users.controller.ts"
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "tags": ["api-gateway"],
+        "summary": "GET /v1/me",
+        "operationId": "api-gateway_get__v1_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/api-gateway/src/auth/auth.controller.ts"
+      }
+    },
+    "/v1/posts": {
+      "post": {
+        "tags": ["post-service"],
+        "summary": "POST /v1/posts",
+        "operationId": "post-service_post__v1_posts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts",
+        "operationId": "post-service_get__v1_posts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/posts/{id}/replies": {
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts/{id}/replies",
+        "operationId": "post-service_get__v1_posts_id_replies",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/posts/{id}/thread": {
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts/{id}/thread",
+        "operationId": "post-service_get__v1_posts_id_thread",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/posts/viewer-states": {
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts/viewer-states",
+        "operationId": "post-service_get__v1_posts_viewer_states",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/posts/{id}": {
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts/{id}",
+        "operationId": "post-service_get__v1_posts_id_",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      },
+      "delete": {
+        "tags": ["post-service"],
+        "summary": "DELETE /v1/posts/{id}",
+        "operationId": "post-service_delete__v1_posts_id_",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/posts/{id}/likes": {
+      "post": {
+        "tags": ["post-service"],
+        "summary": "POST /v1/posts/{id}/likes",
+        "operationId": "post-service_post__v1_posts_id_likes",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["post-service"],
+        "summary": "DELETE /v1/posts/{id}/likes",
+        "operationId": "post-service_delete__v1_posts_id_likes",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/graph/follows/{userId}": {
+      "post": {
+        "tags": ["graph-service"],
+        "summary": "POST /v1/graph/follows/{userId}",
+        "operationId": "graph-service_post__v1_graph_follows_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["graph-service"],
+        "summary": "DELETE /v1/graph/follows/{userId}",
+        "operationId": "graph-service_delete__v1_graph_follows_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/follow-requests/incoming": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/follow-requests/incoming",
+        "operationId": "graph-service_get__v1_graph_follow_requests_incoming",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/follow-requests/{requesterId}/accept": {
+      "post": {
+        "tags": ["graph-service"],
+        "summary": "POST /v1/graph/follow-requests/{requesterId}/accept",
+        "operationId": "graph-service_post__v1_graph_follow_requests_requesterId_accept",
+        "parameters": [
+          {
+            "name": "requesterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/graph/follow-requests/{requesterId}/reject": {
+      "post": {
+        "tags": ["graph-service"],
+        "summary": "POST /v1/graph/follow-requests/{requesterId}/reject",
+        "operationId": "graph-service_post__v1_graph_follow_requests_requesterId_reject",
+        "parameters": [
+          {
+            "name": "requesterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/graph/following/{userId}": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/following/{userId}",
+        "operationId": "graph-service_get__v1_graph_following_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/followers/{userId}": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/followers/{userId}",
+        "operationId": "graph-service_get__v1_graph_followers_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/blocks/{userId}": {
+      "post": {
+        "tags": ["graph-service"],
+        "summary": "POST /v1/graph/blocks/{userId}",
+        "operationId": "graph-service_post__v1_graph_blocks_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["graph-service"],
+        "summary": "DELETE /v1/graph/blocks/{userId}",
+        "operationId": "graph-service_delete__v1_graph_blocks_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/mutes/{userId}": {
+      "post": {
+        "tags": ["graph-service"],
+        "summary": "POST /v1/graph/mutes/{userId}",
+        "operationId": "graph-service_post__v1_graph_mutes_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["graph-service"],
+        "summary": "DELETE /v1/graph/mutes/{userId}",
+        "operationId": "graph-service_delete__v1_graph_mutes_userId_",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/timelines/home": {
+      "get": {
+        "tags": ["timeline-service"],
+        "summary": "GET /v1/timelines/home",
+        "operationId": "timeline-service_get__v1_timelines_home",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/timeline-service/src/timeline/timeline.controller.ts"
+      }
+    },
+    "/v1/notifications": {
+      "get": {
+        "tags": ["notification-service"],
+        "summary": "GET /v1/notifications",
+        "operationId": "notification-service_get__v1_notifications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/notification-service/src/notifications/notifications.controller.ts"
+      }
+    },
+    "/v1/notifications/unread-count": {
+      "get": {
+        "tags": ["notification-service"],
+        "summary": "GET /v1/notifications/unread-count",
+        "operationId": "notification-service_get__v1_notifications_unread_count",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/notification-service/src/notifications/notifications.controller.ts"
+      }
+    },
+    "/v1/notifications/read": {
+      "post": {
+        "tags": ["notification-service"],
+        "summary": "POST /v1/notifications/read",
+        "operationId": "notification-service_post__v1_notifications_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/notification-service/src/notifications/notifications.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/search": {
+      "get": {
+        "tags": ["search-service"],
+        "summary": "GET /v1/search",
+        "operationId": "search-service_get__v1_search",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/search-service/src/search/search.controller.ts"
+      }
+    },
+    "/v1/realtime/ticket": {
+      "post": {
+        "tags": ["realtime-gateway"],
+        "summary": "POST /v1/realtime/ticket",
+        "operationId": "realtime-gateway_post__v1_realtime_ticket",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/realtime-gateway/src/realtime/realtime.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "tags": ["timeline-service"],
+        "summary": "GET /health/live",
+        "operationId": "timeline-service_get__health_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/timeline-service/src/health.controller.ts"
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": ["timeline-service"],
+        "summary": "GET /health/ready",
+        "operationId": "timeline-service_get__health_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/timeline-service/src/health.controller.ts"
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": ["timeline-service"],
+        "summary": "GET /metrics",
+        "operationId": "timeline-service_get__metrics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/timeline-service/src/metrics.controller.ts"
+      }
+    },
+    "/v1/openapi.json": {
+      "get": {
+        "tags": ["api-gateway"],
+        "summary": "GET /v1/openapi.json",
+        "operationId": "api-gateway_get__v1_openapi_json",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/api-gateway/src/openapi/openapi.controller.ts"
+      }
+    },
+    "/v1/version": {
+      "get": {
+        "tags": ["api-gateway"],
+        "summary": "GET /v1/version",
+        "operationId": "api-gateway_get__v1_version",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/api-gateway/src/version/version.controller.ts"
+      }
+    },
+    "/v1/graph/followers/{userId}/ids": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/followers/{userId}/ids",
+        "operationId": "graph-service_get__v1_graph_followers_userId_ids",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/followers/{userId}/count": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/followers/{userId}/count",
+        "operationId": "graph-service_get__v1_graph_followers_userId_count",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/blocks/{userId}/related-ids": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/blocks/{userId}/related-ids",
+        "operationId": "graph-service_get__v1_graph_blocks_userId_related_ids",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/blocks/{userId}/related-ids/internal": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/blocks/{userId}/related-ids/internal",
+        "operationId": "graph-service_get__v1_graph_blocks_userId_related_ids_internal",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/mutes/{userId}/ids/internal": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/mutes/{userId}/ids/internal",
+        "operationId": "graph-service_get__v1_graph_mutes_userId_ids_internal",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/relationship/suppress-notification": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/relationship/suppress-notification",
+        "operationId": "graph-service_get__v1_graph_relationship_suppress_notification",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/v1/graph/relationship/following": {
+      "get": {
+        "tags": ["graph-service"],
+        "summary": "GET /v1/graph/relationship/following",
+        "operationId": "graph-service_get__v1_graph_relationship_following",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/graph-service/src/graph/graph.controller.ts"
+      }
+    },
+    "/": {
+      "get": {
+        "tags": ["hello-service"],
+        "summary": "GET /",
+        "operationId": "hello-service_get__",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/hello-service/src/app.controller.ts"
+      }
+    },
+    "/v1/users/{id}": {
+      "get": {
+        "tags": ["identity-service"],
+        "summary": "GET /v1/users/{id}",
+        "operationId": "identity-service_get__v1_users_id_",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/identity-service/src/users/users.controller.ts"
+      }
+    },
+    "/v1/notifications/batch": {
+      "get": {
+        "tags": ["notification-service"],
+        "summary": "GET /v1/notifications/batch",
+        "operationId": "notification-service_get__v1_notifications_batch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/notification-service/src/notifications/notifications.controller.ts"
+      }
+    },
+    "/v1/posts/batch": {
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts/batch",
+        "operationId": "post-service_get__v1_posts_batch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/posts/recent-ids": {
+      "get": {
+        "tags": ["post-service"],
+        "summary": "GET /v1/posts/recent-ids",
+        "operationId": "post-service_get__v1_posts_recent_ids",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/post-service/src/posts/posts.controller.ts"
+      }
+    },
+    "/v1/realtime/stream": {
+      "get": {
+        "tags": ["realtime-gateway"],
+        "summary": "GET /v1/realtime/stream",
+        "operationId": "realtime-gateway_get__v1_realtime_stream",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/realtime-gateway/src/realtime/realtime.controller.ts"
+      }
+    },
+    "/v1/search/index/users": {
+      "post": {
+        "tags": ["search-service"],
+        "summary": "POST /v1/search/index/users",
+        "operationId": "search-service_post__v1_search_index_users",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/search-service/src/search/search.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/search/index/posts": {
+      "post": {
+        "tags": ["search-service"],
+        "summary": "POST /v1/search/index/posts",
+        "operationId": "search-service_post__v1_search_index_posts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (schema TBD)"
+          },
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "Unavailable"
+          }
+        },
+        "x-source-file": "apps/search-service/src/search/search.controller.ts",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}
