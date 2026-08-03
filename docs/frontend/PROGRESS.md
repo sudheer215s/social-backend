@@ -9,21 +9,23 @@ Phase F0 (Foundation) — in progress.
 
 ### Done
 
-| ID     | Summary                  | Notes                                                           |
-| ------ | ------------------------ | --------------------------------------------------------------- |
-| F0-T01 | Scaffold `@social/web`   | Next.js 15 App Router, Vitest, monorepo workspace, landing page |
-| F0-T02 | Tailwind + design tokens | CSS vars light/dark; WCAG AA contrast unit tests                |
-| F0-T03 | ESLint layer boundaries  | no-restricted-imports + ban fetch; assert script                |
-| F0-T04 | OpenAPI → TS types       | `openapi/openapi.json` + `web/api-client/generated/schema.ts`   |
-| F0-T05 | api-client errors+tokens | problem+json, synthetic errors, memory-only token store         |
-| F0-T06 | request pipeline         | deadlines, retry policy, X-Degraded / RateLimit side channel    |
-| F0-T07 | single-flight refresh    | **20 parallel 401s → 1 refresh**; post-lock re-check; reuse msg |
-| F0-T08 | MSW + SessionProbe       | `useMe` + MSW GET /v1/me; `/home` CSR shell                     |
+| ID     | Summary                    | Notes                                                           |
+| ------ | -------------------------- | --------------------------------------------------------------- |
+| F0-T01 | Scaffold `@social/web`     | Next.js 15 App Router, Vitest, monorepo workspace, landing page |
+| F0-T02 | Tailwind + design tokens   | CSS vars light/dark; WCAG AA contrast unit tests                |
+| F0-T03 | ESLint layer boundaries    | no-restricted-imports + ban fetch; assert script                |
+| F0-T04 | OpenAPI → TS types         | `openapi/openapi.json` + `web/api-client/generated/schema.ts`   |
+| F0-T05 | api-client errors+tokens   | problem+json, synthetic errors, memory-only token store         |
+| F0-T06 | request pipeline           | deadlines, retry policy, X-Degraded / RateLimit side channel    |
+| F0-T07 | single-flight refresh      | **20 parallel 401s → 1 refresh**; post-lock re-check; reuse msg |
+| F0-T08 | MSW + SessionProbe         | `useMe` + MSW GET /v1/me; `/home` CSR shell                     |
+| F0-T09 | UI Button + Skeleton       | CVA variants, tap-min, reduced-motion; Storybook deferred       |
+| F1-T01 | Session machine + boundary | Pure reducer + Zustand + boot silent refresh; /home gated       |
 
 ### Active next
 
-- F0-T09 UI kit seed
-- Phase F1 session machine / auth forms
+- F1-T02 auth forms
+- F1-T03 route guards with ?next=
 
 ### Run
 
@@ -46,3 +48,5 @@ pnpm --filter @social/web build
 - Network errors during refresh never clear the session; only explicit 401 on `/v1/auth/refresh` does.
 - Request deadlines use `Promise.race` (not AbortSignal on fetch) so jsdom + MSW/undici do not hit AbortSignal realm mismatches.
 - F0 exit criteria met: trivial authenticated screen against MSW; 20-parallel-401 refresh test green.
+- Session store is Zustand in features; network for boot is `data/session/api` (features → data → api-client).
+- Network error during `refreshing` returns to `authenticated` (never logout).

@@ -1,4 +1,6 @@
-import { SessionProbe } from '@/features/auth/SessionProbe';
+'use client';
+
+import { SessionBoundary, SessionProbe } from '@/features/auth';
 
 /**
  * Authenticated home shell (CSR). Full timeline lands in F2.
@@ -6,8 +8,23 @@ import { SessionProbe } from '@/features/auth/SessionProbe';
  */
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-lg px-6 py-12">
-      <SessionProbe />
-    </main>
+    <SessionBoundary
+      requireAuth
+      fallback={
+        <main className="mx-auto max-w-lg px-6 py-12">
+          <p className="text-fg-muted">
+            Please{' '}
+            <a href="/login?next=/home" className="text-accent">
+              log in
+            </a>{' '}
+            to view your home feed.
+          </p>
+        </main>
+      }
+    >
+      <main className="mx-auto max-w-lg px-6 py-12">
+        <SessionProbe />
+      </main>
+    </SessionBoundary>
   );
 }
