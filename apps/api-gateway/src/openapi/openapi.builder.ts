@@ -161,6 +161,29 @@ export function buildGatewayOpenApi(): Record<string, unknown> {
         },
       },
     },
+    '/v1/admin/reports': {
+      get: {
+        tags: ['moderation'],
+        summary: 'List abuse reports (admin; ADMIN_USER_IDS)',
+        security: bearer,
+        responses: {
+          '200': { description: 'OK' },
+          '403': { description: 'Not admin' },
+        },
+      },
+    },
+    '/v1/admin/reports/{id}': {
+      patch: {
+        tags: ['moderation'],
+        summary: 'Update report status (admin)',
+        security: bearer,
+        responses: {
+          '200': { description: 'OK' },
+          '403': { description: 'Not admin' },
+          '404': { description: 'Not found' },
+        },
+      },
+    },
     '/v1/version': {
       get: {
         tags: ['ops'],
