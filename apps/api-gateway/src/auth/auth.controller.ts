@@ -132,6 +132,22 @@ export class AuthController {
     clearRefreshCookie(res);
   }
 
+  @Post('v1/auth/logout-all')
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  async logoutAll(
+    @Req() req: AuthedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const authorization = this.bearer(req);
+    await this.forward(
+      'POST',
+      '/v1/auth/logout-all',
+      authorization ? { authorization } : {},
+    );
+    clearRefreshCookie(res);
+  }
+
   @Post('v1/auth/verify-email')
   verifyEmail(@Body() body: unknown) {
     return this.forward('POST', '/v1/auth/verify-email', { body });

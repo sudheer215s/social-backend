@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -19,6 +20,7 @@ import {
   verifyEmailSchema,
 } from './validation';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { JwtAuthGuard, type IdentityAuthedRequest } from './jwt-auth.guard';
 import { JwtKeyRing } from '../tokens/jwt-keys';
 
 const RT_COOKIE = 'rt';
@@ -86,6 +88,17 @@ export class AuthController {
     if (token) {
       await this.auth.logout(token);
     }
+    this.clearRtCookie(res);
+  }
+
+  @Post('v1/auth/logout-all')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(204)
+  async logoutAll(
+    @Req() req: IdentityAuthedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.auth.logoutAll(req.userId!);
     this.clearRtCookie(res);
   }
 

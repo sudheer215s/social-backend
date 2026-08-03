@@ -19,8 +19,10 @@ import { ContentController } from './content/content.controller';
 import { AuthGuard } from './auth/auth.guard';
 import { EmailVerifiedGuard } from './auth/email-verified.guard';
 import { JwtVerifier } from './auth/jwt-verifier';
+import { ProblemJsonFilter } from './errors/problem-json.filter';
 import { HealthController } from './health.controller';
 import { MetricsController } from './metrics.controller';
+import { OpenApiController } from './openapi/openapi.controller';
 import { IdentityGrpcClient } from './proxy/identity.grpc.client';
 import { IdentityProxy } from './proxy/identity.proxy';
 import { RateLimitGuard } from './rate-limit/rate-limit.guard';
@@ -31,6 +33,7 @@ import {
   REDIS,
   SID_REVOCATION,
 } from './tokens';
+import { APP_FILTER } from '@nestjs/core';
 
 @Module({
   controllers: [
@@ -38,6 +41,7 @@ import {
     ContentController,
     HealthController,
     MetricsController,
+    OpenApiController,
   ],
   providers: [
     {
@@ -142,6 +146,10 @@ import {
     RateLimitGuard,
     TicketRateLimitGuard,
     EmailVerifiedGuard,
+    {
+      provide: APP_FILTER,
+      useClass: ProblemJsonFilter,
+    },
   ],
 })
 export class AppModule {}

@@ -188,6 +188,11 @@ export class AuthService {
     await this.sessions.revokeByRefreshToken(refreshToken);
   }
 
+  /** Revoke every active session for the user (and access-token sid set). */
+  async logoutAll(userId: string): Promise<void> {
+    await this.sessions.revokeAllForUser(userId);
+  }
+
   async verifyEmail(input: VerifyEmailInput): Promise<{ verified: true }> {
     const consumed = await this.emailTokens.consume(
       input.token,

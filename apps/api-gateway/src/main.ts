@@ -13,6 +13,10 @@ import {
 } from '@social/platform-redis';
 import { AppModule } from './app.module';
 import { createAnonRateLimitMiddleware } from './rate-limit/anon-rate-limit.middleware';
+import {
+  configureCorsOrigins,
+  securityHeadersMiddleware,
+} from './security/security.middleware';
 
 async function bootstrap(): Promise<void> {
   const serviceName = process.env.SERVICE_NAME ?? 'api-gateway';
@@ -24,8 +28,34 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
+
+  const corsOrigin = configureCorsOrigins();
+  if (corsOrigin !== false) {
+    app.enableCors({
+      origin: corsOrigin,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: [
+        'Authorization',
+        'Content-Type',
+        'Idempotency-Key',
+        'X-Request-Id',
+        'traceparent',
+      ],
+      exposedHeaders: [
+        'X-Request-Id',
+        'X-RateLimit-Limit',
+        'X-RateLimit-Remaining',
+        'X-RateLimit-Reset',
+        'Retry-After',
+        'Idempotent-Replay',
+      ],
+    });
+  }
+
   // Correlation first so metrics/rate-limit see the same request id context.
   app.use(requestContextMiddleware());
+  app.use(securityHeadersMiddleware());
   app.use(httpMetricsMiddleware());
 
   // Anonymous IP rate limit (trusted XFF only) — fail-open if Redis down.

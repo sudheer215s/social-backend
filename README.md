@@ -28,7 +28,7 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
 | Observability | HTTP RED metrics; **X-Request-Id** + optional `traceparent` propagation                                                              |
 | Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
-| Edge          | API gateway (JWT + **email_verified claim**, trusted XFF, httpOnly `rt`, Idempotency-Key, ticket RL), smoke e2e                      |
+| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, **RFC 9457**, CORS/security headers, OpenAPI)         |
 
 ### Explicit non-goals (v2 design)
 
@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Wire `TRUSTED_PROXIES` and real registry digests per environment when deploying.
+Wire `TRUSTED_PROXIES`, `CORS_ORIGINS`, and real image digests per environment when deploying.
 
 ---
 
@@ -174,6 +174,14 @@ GET  /v1/posts/:id/thread
 - `#hashtag` (max 10) stored normalised; search indexes hashtags from content.
 - Post length: **≤280 grapheme clusters** (API); DB allows multi-codepoint emoji within a byte budget.
 - Authors with `visibility=followers`: anonymous `GET` post/profile feed returns **404**; followers (JWT) may read. Search never indexes their posts (`author_visibility=public` filter + skip on index).
+
+### Errors, CORS, OpenAPI
+
+- Errors: `Content-Type: application/problem+json` (RFC 9457) with `type`, `title`, `status`, `detail`, `instance`, `traceId` (from `X-Request-Id`).
+- CORS: set `CORS_ORIGINS=https://app.example.com,https://www.example.com` (comma list). Dev allows all origins; production requires explicit list.
+- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS in production.
+- Spec: `GET /v1/openapi.json` (gateway surface). Full monorepo scan: `pnpm openapi:export`.
+- Logout everywhere: `POST /v1/auth/logout-all` (Bearer) revokes all sessions + clears `rt` cookie.
 
 ### Metrics (RED)
 
