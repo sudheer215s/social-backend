@@ -26,6 +26,11 @@ function LoginContent() {
           router.replace(next);
         }}
       />
+      <p className="text-sm text-fg-muted">
+        <a href="/forgot-password" className="text-accent">
+          Forgot your password?
+        </a>
+      </p>
     </main>
   );
 }

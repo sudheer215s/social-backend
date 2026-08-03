@@ -27,8 +27,8 @@ One commit per row. Each row is independently testable.
 | ID      | Task                                                             | Verifiable output                                                                                                        | Status |
 | ------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------ |
 | F1-T05a | `data/session/password.ts` mutations + Zod schemas               | Unit: forgot resolves identically for 202/400/404; rethrows 429/5xx/network. Reset clears tokens. Confirm-mismatch fails | done   |
-| F1-T05b | `ForgotPasswordForm` + `/forgot-password` route                  | Unit: unknown and known email render byte-identical copy; 429 renders wait copy; submit disabled while pending           | todo   |
-| F1-T05c | `ResetPasswordForm` + `/reset-password?token=` route             | Unit: invalid/expired token → recoverable message + link to request new; success → onSuccess (login)                     | todo   |
+| F1-T05b | `ForgotPasswordForm` + `/forgot-password` route                  | Unit: unknown and known email render byte-identical copy; 429 renders wait copy; submit disabled while pending           | done   |
+| F1-T05c | `ResetPasswordForm` + `/reset-password?token=` route             | Unit: invalid/expired token → recoverable message + link to request new; success → onSuccess (login)                     | done   |
 | F1-T05d | `VerifyEmailPanel` + `/verify-email?token=` route + MSW handlers | Unit: auto-verifies on mount; verified state invalidates `me` so `UnverifiedGate` unlocks; invalid token is not an error | todo   |
 
 ## Active next
