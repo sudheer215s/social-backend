@@ -37,6 +37,7 @@
     "dev:notification": "turbo run dev --filter=@social/notification-service",
     "dev:search": "turbo run dev --filter=@social/search-service",
     "dev:realtime": "turbo run dev --filter=@social/realtime-gateway",
+    "dev:web": "turbo run dev --filter=@social/web",
     "dlq:list": "node scripts/dlq-inspect.mjs list",
     "dlq:redrive": "node scripts/dlq-inspect.mjs redrive",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
@@ -60,6 +61,9 @@
     ],
     "libs/**/*.{ts,tsx}": [
       "eslint --fix --max-warnings=0"
+    ],
+    "web/**/*.{ts,tsx}": [
+      "prettier --write"
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
