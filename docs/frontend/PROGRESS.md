@@ -5,28 +5,22 @@
 
 ## Status
 
-Phase F1 (Auth + shell) — in progress. Phase F0 foundation complete.
+Phase F1 (Auth + shell) — core auth path complete through logout and unverified gate.
 
 ### Done
 
-| ID     | Summary                    | Notes                                                           |
-| ------ | -------------------------- | --------------------------------------------------------------- |
-| F0-T01 | Scaffold `@social/web`     | Next.js 15 App Router, Vitest, monorepo workspace, landing page |
-| F0-T02 | Tailwind + design tokens   | CSS vars light/dark; WCAG AA contrast unit tests                |
-| F0-T03 | ESLint layer boundaries    | no-restricted-imports + ban fetch; assert script                |
-| F0-T04 | OpenAPI → TS types         | `openapi/openapi.json` + `web/api-client/generated/schema.ts`   |
-| F0-T05 | api-client errors+tokens   | problem+json, synthetic errors, memory-only token store         |
-| F0-T06 | request pipeline           | deadlines, retry policy, X-Degraded / RateLimit side channel    |
-| F0-T07 | single-flight refresh      | **20 parallel 401s → 1 refresh**; post-lock re-check; reuse msg |
-| F0-T08 | MSW + SessionProbe         | `useMe` + MSW GET /v1/me; `/home` CSR shell                     |
-| F0-T09 | UI Button + Skeleton       | CVA variants, tap-min, reduced-motion; Storybook deferred       |
-| F1-T01 | Session machine + boundary | Pure reducer + Zustand + boot silent refresh; /home gated       |
-| F1-T02 | Login / register forms     | RHF+Zod; mapAuthError anti-enumeration; `/login` `/register`    |
+| ID         | Summary                    | Notes                                                      |
+| ---------- | -------------------------- | ---------------------------------------------------------- |
+| F0-T01–T09 | Foundation complete        | Next.js, tokens, ESLint, OpenAPI, api-client, MSW, UI seed |
+| F1-T01     | Session machine + boundary | Pure reducer + Zustand + boot silent refresh               |
+| F1-T02     | Login / register forms     | RHF+Zod; mapAuthError anti-enumeration                     |
+| F1-T03     | RequireAuth + `?next=`     | Open-redirect safe; `/login?next=` on anonymous app routes |
+| F1-T04     | Logout + UnverifiedGate    | Fire-and-forget logout; verify banner; app shell nav       |
 
 ### Active next
 
-- F1-T03 route guards with `?next=`
-- Logout + UnverifiedGate
+- F1-T05 password reset + verify-email
+- Phase F2 timeline
 
 ### Run
 
@@ -39,16 +33,11 @@ pnpm --filter @social/web build
 
 ### Decisions while building
 
-- Package name `@social/web`; workspace entry is `web` (not `web/*`) — single Next app.
-- Root Nest ESLint is skipped during `next build` (`eslint.ignoreDuringBuilds`); web-specific boundaries land in F0-T03.
-- Dev port **3100** to avoid clashing with api-gateway `:3000`.
-- Dark-mode accent is `blue-600` (37 99 235), not blue-500 — white label text needs ≥ 4.5:1.
-- Token RGB channels live in both `lib/tokens.ts` (tests) and `styles/globals.css` (runtime).
-- Layer boundaries use `no-restricted-imports` + `no-restricted-globals`; asserted via `scripts/assert-lint-boundaries.mjs`.
-- On 401 the client clears the rejected access token before `refresh()` so the post-lock re-check only succeeds when another tab installed a _new_ token.
-- Network errors during refresh never clear the session; only explicit 401 on `/v1/auth/refresh` does.
-- Request deadlines use `Promise.race` (not AbortSignal on fetch) so jsdom + MSW/undici do not hit AbortSignal realm mismatches.
-- F0 exit criteria met: trivial authenticated screen against MSW; 20-parallel-401 refresh test green.
-- Session store is Zustand in features; network for boot is `data/session/api` (features → data → api-client).
-- Network error during `refreshing` returns to `authenticated` (never logout).
-- Login 401 always maps to one form-level message (anti-enumeration); never field-level email hints.
+- Package name `@social/web`; workspace entry is `web`.
+- Dev port **3100** (gateway is `:3000`).
+- Layer boundaries: features → data → api-client; ban global `fetch` outside api-client.
+- On 401 clear access token before refresh so post-lock re-check only succeeds for a _new_ token.
+- Request deadlines use `Promise.race` (jsdom/MSW AbortSignal compatibility).
+- `safeNextPath` rejects `//`, absolute URLs, and `://` embedded paths.
+- Logout always clears local tokens even if `POST /logout` fails.
+- Unverified is a normal UI state (gate + banner), not an error boundary.

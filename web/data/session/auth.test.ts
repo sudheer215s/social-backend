@@ -4,6 +4,7 @@ import * as client from '@/api-client/client';
 import {
   INVALID_CREDENTIALS_MESSAGE,
   login,
+  logout,
   mapAuthError,
   register,
 } from './auth';
@@ -77,5 +78,22 @@ describe('login / register (F1-T02)', () => {
       username: 'alice',
     });
     expect(tokens.get()).toBe('tok-reg');
+  });
+
+  it('clears tokens even when logout network fails', async () => {
+    tokens.set('still-here', 600);
+    vi.spyOn(client, 'request').mockRejectedValue(new NetworkError());
+    await logout();
+    expect(tokens.get()).toBeNull();
+  });
+
+  it('clears tokens after successful logout', async () => {
+    tokens.set('still-here', 600);
+    vi.spyOn(client, 'request').mockResolvedValue({
+      data: undefined,
+      response: new Response(null, { status: 204 }),
+    });
+    await logout();
+    expect(tokens.get()).toBeNull();
   });
 });

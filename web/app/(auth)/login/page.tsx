@@ -3,11 +3,12 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { LoginForm } from '@/features/auth/LoginForm';
+import { safeNextPath } from '@/lib/safe-next';
 
 function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get('next') || '/home';
+  const next = safeNextPath(params.get('next'));
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-12">
@@ -22,17 +23,11 @@ function LoginContent() {
       </div>
       <LoginForm
         onSuccess={() => {
-          router.replace(safeNext(next));
+          router.replace(next);
         }}
       />
     </main>
   );
-}
-
-/** Only allow relative in-app paths. */
-function safeNext(path: string): string {
-  if (!path.startsWith('/') || path.startsWith('//')) return '/home';
-  return path;
 }
 
 export default function LoginPage() {

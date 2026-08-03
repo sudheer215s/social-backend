@@ -69,6 +69,25 @@ export async function register(input: RegisterInput): Promise<TokenResponse> {
   return data;
 }
 
+/**
+ * Logout: fire-and-forget network, always clear local session.
+ * @see docs/frontend/03-flows.md §11
+ */
+export async function logout(): Promise<void> {
+  ensureAuthConfigured();
+  try {
+    await request('/v1/auth/logout', {
+      method: 'POST',
+      skipAuthRefresh: true,
+      deadline: 'auth',
+    });
+  } catch {
+    // Connectivity must not leave the user "logged in" locally.
+  } finally {
+    tokens.clear();
+  }
+}
+
 /** Map API failures to form-safe, anti-enumeration messages. */
 export function mapAuthError(err: unknown): AuthFormError {
   if (err instanceof ApiError) {

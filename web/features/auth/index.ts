@@ -1,6 +1,9 @@
 export { SessionBoundary } from './SessionBoundary';
 export { SessionBootstrap } from './SessionBootstrap';
 export { SessionProbe } from './SessionProbe';
+export { RequireAuth } from './RequireAuth';
+export { AppShell } from './AppShell';
+export { UnverifiedGate, VerifyEmailBanner } from './UnverifiedGate';
 export {
   useSessionStore,
   dispatchSession,

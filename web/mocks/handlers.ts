@@ -52,6 +52,10 @@ export const handlers = [
     );
   }),
 
+  http.post(`${API}/v1/auth/logout`, () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get(`${API}/v1/me`, ({ request }) => {
     const auth = request.headers.get('authorization');
     if (!auth?.startsWith('Bearer ')) {
@@ -75,3 +79,23 @@ export const handlers = [
     });
   }),
 ];
+
+/** Handler variants for tests that need an unverified user. */
+export const unverifiedMeHandler = http.get(`${API}/v1/me`, ({ request }) => {
+  const auth = request.headers.get('authorization');
+  if (!auth?.startsWith('Bearer ')) {
+    return HttpResponse.json(
+      { type: 'about:blank', title: 'Unauthorized', status: 401 },
+      {
+        status: 401,
+        headers: { 'content-type': 'application/problem+json' },
+      },
+    );
+  }
+  return HttpResponse.json({
+    id: 'user_msw_1',
+    username: 'msw_user',
+    display_name: 'MSW User',
+    email_verified: false,
+  });
+});
