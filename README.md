@@ -34,6 +34,15 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 
 Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated moderation AI.
 
+### Tests
+
+| Suite                           | Where                                      | Command                                       |
+| ------------------------------- | ------------------------------------------ | --------------------------------------------- |
+| **Unit (main)**                 | GitHub Actions CI + local                  | `pnpm test`                                   |
+| Lint / typecheck / build        | GitHub Actions CI                          | `pnpm lint` · `pnpm typecheck` · `pnpm build` |
+| Integration (DB/Redis/ES/Kafka) | **Local only** (or Actions → Run workflow) | `pnpm compose:up && pnpm test:integration`    |
+| Full stack smoke                | Manual Actions / local                     | `pnpm compose:stack && pnpm smoke:e2e`        |
+
 ### Known gaps (not done yet)
 
 Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing. Full auto-instrumentation (DB/Kafka) optional later.

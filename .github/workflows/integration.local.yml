@@ -1,0 +1,75 @@
+# Optional: integration tests with Compose.
+# Not on push/PR — run manually or locally:
+#   pnpm compose:up && pnpm test:integration
+name: Integration (manual)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: compose infra · integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install probe tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq redis-tools netcat-openbsd
+
+      - name: Start infrastructure
+        run: docker compose -f docker/docker-compose.yml up -d
+
+      - name: Wait for infrastructure
+        run: |
+          set -e
+          for i in $(seq 1 90); do
+            pg=0; rd=0; es=0; kf=0
+            nc -z 127.0.0.1 6432 && pg=1 || true
+            redis-cli -h 127.0.0.1 ping 2>/dev/null | grep -q PONG && rd=1 || true
+            curl -fsS http://127.0.0.1:9200 >/dev/null 2>&1 && es=1 || true
+            nc -z 127.0.0.1 19092 && kf=1 || true
+            if [ "$pg" = 1 ] && [ "$rd" = 1 ] && [ "$es" = 1 ] && [ "$kf" = 1 ]; then
+              echo "infra ready (attempt $i)"
+              docker compose -f docker/docker-compose.yml ps
+              exit 0
+            fi
+            echo "waiting… pg=$pg redis=$rd es=$es kafka=$kf ($i)"
+            sleep 4
+          done
+          echo "infra not ready"
+          docker compose -f docker/docker-compose.yml ps
+          docker compose -f docker/docker-compose.yml logs --tail=80
+          exit 1
+
+      - name: Integration tests
+        env:
+          DATABASE_URL: postgres://social:social@127.0.0.1:6432/social
+          REDIS_URL: redis://127.0.0.1:6379
+          ELASTICSEARCH_URL: http://127.0.0.1:9200
+          KAFKA_BROKERS: 127.0.0.1:19092
+        run: pnpm test:integration
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker/docker-compose.yml down -v

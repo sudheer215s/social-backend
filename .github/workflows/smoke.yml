@@ -1,12 +1,9 @@
-# Full stack smoke: infra + app images + gateway e2e.
-# Manual or nightly — too heavy for every PR.
+# Full stack smoke — local-heavy; not on every PR.
+# Run: workflow_dispatch only (no scheduled email spam).
 name: Stack smoke
 
 on:
   workflow_dispatch:
-  schedule:
-    # 06:00 UTC daily
-    - cron: '0 6 * * *'
 
 concurrency:
   group: smoke-${{ github.ref }}
