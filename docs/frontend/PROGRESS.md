@@ -36,3 +36,4 @@ pnpm --filter @social/web build
 - Dev port **3100** to avoid clashing with api-gateway `:3000`.
 - Dark-mode accent is `blue-600` (37 99 235), not blue-500 — white label text needs ≥ 4.5:1.
 - Token RGB channels live in both `lib/tokens.ts` (tests) and `styles/globals.css` (runtime).
+- Layer boundaries use `no-restricted-imports` + `no-restricted-globals` (eslint-plugin-boundaries v7 API was unstable for our patterns); asserted via `scripts/assert-lint-boundaries.mjs`.
