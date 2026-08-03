@@ -9,3 +9,9 @@ export {
   type GrpcClientOptionsInput,
   type RetryPolicy,
 } from './client-options';
+export {
+  CircuitBreaker,
+  CircuitBreakerRegistry,
+  CircuitOpenError,
+  type CircuitState,
+} from './circuit-breaker';

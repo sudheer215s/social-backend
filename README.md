@@ -18,17 +18,17 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 
 ### Implemented surface
 
-| Area          | Capabilities                                                                                                                 |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Identity      | Auth, profiles, visibility, deactivate/erasure, counters, **abuse reports**                                                  |
-| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, **viewerLiked/viewerReposted**, cursor feeds  |
-| Graph         | Follow/unfollow + **churn guards**, follow requests, blocks, mutes, cursor lists, cascade on erase                           |
-| Timeline      | Fan-out, rebuild via **recent-ids batch**, large-account pull, block/mute filter, cursor home                                |
-| Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                     |
-| Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                    |
-| Observability | HTTP RED; **X-Request-Id** in logs; **OTLP traces** to Jaeger when collector is up                                           |
-| Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                   |
-| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, RFC 9457, **write velocity limits**, OpenAPI) |
+| Area          | Capabilities                                                                                                                                                |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity      | Auth, profiles, visibility, deactivate/erasure, counters, **abuse reports**                                                                                 |
+| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, **viewerLiked/viewerReposted**, cursor feeds                                 |
+| Graph         | Follow/unfollow + **churn guards**, follow requests, blocks, mutes, cursor lists, cascade on erase                                                          |
+| Timeline      | Fan-out, rebuild via **recent-ids batch**, large-account pull, block/mute filter, cursor home                                                               |
+| Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                                                    |
+| Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                                                   |
+| Observability | HTTP RED; **X-Request-Id** in logs; **OTLP traces** to Jaeger when collector is up                                                                          |
+| Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                                                  |
+| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, RFC 9457, **write velocity limits**, **per-host circuit breakers**, OpenAPI) |
 
 ### Explicit non-goals (v2 design)
 
@@ -49,13 +49,23 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 ```http
 GET  /v1/users/me/export     # profile + recent posts + following/followers (sync JSON)
 POST /v1/reports             # { "targetType": "user"|"post", "targetId": "…", "reason": "spam", "details": "…" }
+GET  /v1/admin/reports       # list (status=open|…); requires ADMIN_USER_IDS
+PATCH /v1/admin/reports/:id  # { "status": "resolved"|"dismissed"|"reviewing", "note": "…" }
 ```
 
-Reports are rate-limited and deduped (one open report per target / 24h).
+Reports are rate-limited and deduped (one open report per target / 24h). Admin routes fail closed if `ADMIN_USER_IDS` is empty.
+
+### Circuit breakers (gateway)
+
+Per upstream host (e.g. `127.0.0.1:3002`): sliding-window breaker (defaults from `@social/platform-grpc` — volume 20, 50% errors, 15s cool-down). Open circuit → `503` with problem+json. Upstream `5xx` and transport failures count as failures.
+
+### Content sanitization
+
+Post body, profile `displayName`/`bio`, and report `details` strip null/control characters and naive HTML tags before persist.
 
 ### Known gaps (not done yet)
 
-Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing. Full auto-instrumentation (DB/Kafka) optional later. Async export job + signed download URL (design job path) not built — current export is synchronous JSON.
+Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing. Full auto-instrumentation (DB/Kafka) optional later. Async export job + signed download URL (design job path) not built — current export is synchronous JSON. Full moderation actions (hide post / ban user) not automated — status updates only.
 
 ---
 

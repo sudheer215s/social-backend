@@ -257,6 +257,34 @@ export class AuthController {
     });
   }
 
+  @Get('v1/admin/reports')
+  @UseGuards(AuthGuard)
+  listReports(@Req() req: AuthedRequest) {
+    const authorization = this.bearer(req);
+    const q = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    return this.forward('GET', `/v1/admin/reports${q}`, {
+      ...(authorization ? { authorization } : {}),
+    });
+  }
+
+  @Patch('v1/admin/reports/:id')
+  @UseGuards(AuthGuard)
+  updateReport(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const authorization = this.bearer(req);
+    return this.forward(
+      'PATCH',
+      `/v1/admin/reports/${encodeURIComponent(id)}`,
+      {
+        body,
+        ...(authorization ? { authorization } : {}),
+      },
+    );
+  }
+
   @Get('v1/users/me')
   @UseGuards(AuthGuard)
   async me(@Req() req: AuthedRequest) {

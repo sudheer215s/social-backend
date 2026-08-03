@@ -3,10 +3,15 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import type { Pool } from 'pg';
 import { uuidv7 } from 'uuidv7';
-import type { CreateReportInput } from './reports.validation';
+import type {
+  CreateReportInput,
+  ListReportsQuery,
+  UpdateReportStatusInput,
+} from './reports.validation';
 
 export interface AbuseReportDto {
   id: string;
@@ -17,6 +22,39 @@ export interface AbuseReportDto {
   details: string;
   status: string;
   createdAt: Date;
+  reviewedBy?: string | null;
+  reviewedAt?: Date | null;
+  reviewNote?: string | null;
+}
+
+type ReportRow = {
+  id: string;
+  reporter_id: string;
+  target_type: string;
+  target_id: string;
+  reason: string;
+  details: string;
+  status: string;
+  created_at: Date;
+  reviewed_by?: string | null;
+  reviewed_at?: Date | null;
+  review_note?: string | null;
+};
+
+function mapRow(r: ReportRow): AbuseReportDto {
+  return {
+    id: r.id,
+    reporterId: r.reporter_id,
+    targetType: r.target_type,
+    targetId: r.target_id,
+    reason: r.reason,
+    details: r.details,
+    status: r.status,
+    createdAt: r.created_at,
+    reviewedBy: r.reviewed_by ?? null,
+    reviewedAt: r.reviewed_at ?? null,
+    reviewNote: r.review_note ?? null,
+  };
 }
 
 @Injectable()
@@ -79,20 +117,12 @@ export class ReportsService {
     }
 
     const id = uuidv7();
-    const row = await this.pool.query<{
-      id: string;
-      reporter_id: string;
-      target_type: string;
-      target_id: string;
-      reason: string;
-      details: string;
-      status: string;
-      created_at: Date;
-    }>(
+    const row = await this.pool.query<ReportRow>(
       `INSERT INTO identity.abuse_reports
          (id, reporter_id, target_type, target_id, reason, details)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, reporter_id, target_type, target_id, reason, details, status, created_at`,
+       RETURNING id, reporter_id, target_type, target_id, reason, details, status, created_at,
+                 reviewed_by, reviewed_at, review_note`,
       [
         id,
         reporterId,
@@ -102,16 +132,41 @@ export class ReportsService {
         input.details ?? '',
       ],
     );
-    const r = row.rows[0]!;
-    return {
-      id: r.id,
-      reporterId: r.reporter_id,
-      targetType: r.target_type,
-      targetId: r.target_id,
-      reason: r.reason,
-      details: r.details,
-      status: r.status,
-      createdAt: r.created_at,
-    };
+    return mapRow(row.rows[0]!);
+  }
+
+  async list(query: ListReportsQuery): Promise<AbuseReportDto[]> {
+    const row = await this.pool.query<ReportRow>(
+      `SELECT id, reporter_id, target_type, target_id, reason, details, status, created_at,
+              reviewed_by, reviewed_at, review_note
+       FROM identity.abuse_reports
+       WHERE status = $1
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [query.status, query.limit],
+    );
+    return row.rows.map(mapRow);
+  }
+
+  async updateStatus(
+    reportId: string,
+    reviewerId: string,
+    input: UpdateReportStatusInput,
+  ): Promise<AbuseReportDto> {
+    const row = await this.pool.query<ReportRow>(
+      `UPDATE identity.abuse_reports
+       SET status = $2,
+           reviewed_by = $3,
+           reviewed_at = now(),
+           review_note = $4
+       WHERE id = $1
+       RETURNING id, reporter_id, target_type, target_id, reason, details, status, created_at,
+                 reviewed_by, reviewed_at, review_note`,
+      [reportId, input.status, reviewerId, input.note ?? ''],
+    );
+    if ((row.rowCount ?? 0) === 0) {
+      throw new NotFoundException('Report not found');
+    }
+    return mapRow(row.rows[0]!);
   }
 }

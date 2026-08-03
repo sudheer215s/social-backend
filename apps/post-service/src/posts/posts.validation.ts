@@ -1,9 +1,14 @@
 import { z } from 'zod';
 import { graphemeLength, MAX_POST_GRAPHEMES } from './grapheme';
+import { sanitizeUserText } from './sanitize';
 
 export const createPostSchema = z
   .object({
-    content: z.string().optional().default(''),
+    content: z
+      .string()
+      .optional()
+      .default('')
+      .transform((s) => sanitizeUserText(s)),
     mediaRefs: z.array(z.string().min(1).max(128)).max(4).optional(),
     replyToId: z.string().uuid().optional(),
     repostOfId: z.string().uuid().optional(),
