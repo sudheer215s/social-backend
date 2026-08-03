@@ -8,3 +8,10 @@ data:
   JWT_ISSUER: https://api.social.example.com
   NODE_ENV: production
   LOG_LEVEL: info
+  # Browser origin(s) for credentialed CORS — replace with your real web host
+  CORS_ORIGINS: https://app.social.example.com
+  # Trust mesh/ingress pod CIDRs for X-Forwarded-For client IP
+  TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12
+  ENFORCE_EMAIL_VERIFIED: '1'
+  JSON_BODY_LIMIT: 100kb
+  UPSTREAM_TIMEOUT_MS: '5000'

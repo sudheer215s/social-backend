@@ -23,3 +23,11 @@ data:
   KAFKA_BROKERS: redpanda.social.svc.cluster.local:9092
   ELASTICSEARCH_URL: http://elasticsearch.social.svc.cluster.local:9200
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.social.svc.cluster.local:4318
+  # Edge (api-gateway) — override per overlay
+  # Private cluster + cloud LB ranges commonly used as trusted proxies for XFF
+  TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+  CORS_ORIGINS: https://app.social.example.com
+  ENFORCE_EMAIL_VERIFIED: '1'
+  JSON_BODY_LIMIT: 100kb
+  UPSTREAM_TIMEOUT_MS: '5000'
+  APP_VERSION: '0.0.0'

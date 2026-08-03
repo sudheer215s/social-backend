@@ -1,4 +1,5 @@
 import { outboundRequestHeaders } from '@social/platform-telemetry';
+import { fetchUpstream } from './upstream';
 
 /**
  * Thin HTTP forwarder to identity-service until gRPC is wired (Phase 1).
@@ -24,7 +25,7 @@ export class IdentityProxy {
       init.body = JSON.stringify(options.body);
     }
 
-    const res = await fetch(`${this.baseUrl}${path}`, init);
+    const res = await fetchUpstream(`${this.baseUrl}${path}`, init);
     const text = await res.text();
     let json: unknown = null;
     if (text) {

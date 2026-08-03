@@ -29,3 +29,4 @@ patches:
   - path: ingress-host.yaml
   - path: scale-down.yaml
   - path: hpa-dev.yaml
+  - path: config-dev.yaml

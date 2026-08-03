@@ -56,10 +56,14 @@ RUN pnpm --filter ${PKG} deploy --prod /out \
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
 ARG PORT
+ARG APP_VERSION=0.0.0-dev
+ARG GIT_COMMIT=
 WORKDIR /app
 COPY --from=build /out/ ./
 ENV NODE_ENV=production
 ENV PORT=${PORT}
+ENV APP_VERSION=${APP_VERSION}
+ENV GIT_COMMIT=${GIT_COMMIT}
 EXPOSE ${PORT}
 # deploy layout: package root with dist/main.js
 CMD ["dist/main.js"]

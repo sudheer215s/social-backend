@@ -36,6 +36,19 @@ Keys required by apps:
 - `REDIS_URL`
 - `REALTIME_SERVICE_TOKEN`
 
+### Edge ConfigMap keys (api-gateway)
+
+| Key                          | Purpose                                    |
+| ---------------------------- | ------------------------------------------ |
+| `TRUSTED_PROXIES`            | CIDRs/IPs allowed to set `X-Forwarded-For` |
+| `CORS_ORIGINS`               | Browser origins (comma-separated)          |
+| `ENFORCE_EMAIL_VERIFIED`     | `1` in prod; `0` in dev                    |
+| `JSON_BODY_LIMIT`            | Default `100kb`                            |
+| `UPSTREAM_TIMEOUT_MS`        | Default `5000`                             |
+| `APP_VERSION` / `GIT_COMMIT` | Exposed on `GET /v1/version`               |
+
+Dev overlay: `overlays/dev/config-dev.yaml`. Prod host/CORS: `overlays/prod/config-issuer-host.yaml`.
+
 Remote key conventions (prod ExternalSecret):
 
 - `social/prod/database-url`

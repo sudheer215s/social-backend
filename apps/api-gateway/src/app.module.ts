@@ -34,6 +34,7 @@ import {
   SID_REVOCATION,
 } from './tokens';
 import { APP_FILTER } from '@nestjs/core';
+import { VersionController } from './version/version.controller';
 
 @Module({
   controllers: [
@@ -42,6 +43,7 @@ import { APP_FILTER } from '@nestjs/core';
     HealthController,
     MetricsController,
     OpenApiController,
+    VersionController,
   ],
   providers: [
     {

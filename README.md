@@ -36,7 +36,7 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 
 ### Known gaps (not done yet)
 
-Wire `TRUSTED_PROXIES`, `CORS_ORIGINS`, and real image digests per environment when deploying.
+Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing.
 
 ---
 
@@ -175,12 +175,14 @@ GET  /v1/posts/:id/thread
 - Post length: **≤280 grapheme clusters** (API); DB allows multi-codepoint emoji within a byte budget.
 - Authors with `visibility=followers`: anonymous `GET` post/profile feed returns **404**; followers (JWT) may read. Search never indexes their posts (`author_visibility=public` filter + skip on index).
 
-### Errors, CORS, OpenAPI
+### Errors, CORS, OpenAPI, limits
 
 - Errors: `Content-Type: application/problem+json` (RFC 9457) with `type`, `title`, `status`, `detail`, `instance`, `traceId` (from `X-Request-Id`).
-- CORS: set `CORS_ORIGINS=https://app.example.com,https://www.example.com` (comma list). Dev allows all origins; production requires explicit list.
+- CORS: set `CORS_ORIGINS=…` (comma list). Dev allows all if unset; production requires explicit list. K8s ConfigMaps include defaults per overlay.
 - Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS in production.
-- Spec: `GET /v1/openapi.json` (gateway surface). Full monorepo scan: `pnpm openapi:export`.
+- Body limit: `JSON_BODY_LIMIT` (default **100kb**).
+- Upstream budget: `UPSTREAM_TIMEOUT_MS` (default **5000** → 504 on timeout).
+- Spec: `GET /v1/openapi.json`. Version: `GET /v1/version` (`APP_VERSION` / `GIT_COMMIT`).
 - Logout everywhere: `POST /v1/auth/logout-all` (Bearer) revokes all sessions + clears `rt` cookie.
 
 ### Metrics (RED)

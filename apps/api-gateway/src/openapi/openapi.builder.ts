@@ -141,6 +141,14 @@ export function buildGatewayOpenApi(): Record<string, unknown> {
         },
       },
     },
+    '/v1/version': {
+      get: {
+        tags: ['ops'],
+        summary: 'Build / runtime version',
+        security: [],
+        responses: { '200': { description: 'OK' } },
+      },
+    },
     '/health/live': {
       get: {
         tags: ['ops'],

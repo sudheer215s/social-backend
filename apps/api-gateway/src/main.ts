@@ -11,6 +11,7 @@ import {
   type RateLimiter,
   type RedisClient,
 } from '@social/platform-redis';
+import express from 'express';
 import { AppModule } from './app.module';
 import { createAnonRateLimitMiddleware } from './rate-limit/anon-rate-limit.middleware';
 import {
@@ -25,9 +26,14 @@ async function bootstrap(): Promise<void> {
     level: (process.env.LOG_LEVEL as 'info') ?? 'info',
   });
 
+  const jsonLimit = process.env.JSON_BODY_LIMIT ?? '100kb';
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
+    bodyParser: false,
   });
+  // Design §2: reject oversized JSON early (default 100 KB).
+  app.use(express.json({ limit: jsonLimit }));
+  app.use(express.urlencoded({ extended: true, limit: jsonLimit }));
 
   const corsOrigin = configureCorsOrigins();
   if (corsOrigin !== false) {

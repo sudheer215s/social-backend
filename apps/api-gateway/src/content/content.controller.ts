@@ -26,6 +26,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { EmailVerifiedGuard } from '../auth/email-verified.guard';
 import { TicketRateLimitGuard } from '../rate-limit/ticket-rate-limit.guard';
 import { IDEMPOTENCY_STORE } from '../tokens';
+import { fetchUpstream } from '../proxy/upstream';
 
 /**
  * HTTP proxy to post-service and graph-service until BFF composition lands.
@@ -57,7 +58,7 @@ export class ContentController {
     if (options?.body !== undefined) {
       init.body = JSON.stringify(options.body);
     }
-    const res = await fetch(`${base}${path}`, init);
+    const res = await fetchUpstream(`${base}${path}`, init);
     const text = await res.text();
     let json: unknown = null;
     if (text) {
