@@ -136,6 +136,22 @@ describe('PostsService (integration)', () => {
     expect(repostEvents.rowCount ?? 0).toBeGreaterThanOrEqual(1);
   });
 
+  it('returns bounded recent ids across authors', async () => {
+    if (!available) return;
+    const a1 = uuidv7();
+    const a2 = uuidv7();
+    const p1 = await posts.create(a1, { content: 'from a1 one' });
+    const p2 = await posts.create(a1, { content: 'from a1 two' });
+    const p3 = await posts.create(a2, { content: 'from a2 one' });
+    const ids = await posts.recentIdsByAuthors({
+      authorIds: [a1, a2],
+      perAuthor: 10,
+      limit: 50,
+    });
+    expect(ids).toEqual(expect.arrayContaining([p1.id, p2.id, p3.id]));
+    expect(ids[0]! >= ids[ids.length - 1]!).toBe(true); // DESC by UUIDv7 time
+  });
+
   it('stores hashtags and unresolved mentions when identity is down', async () => {
     if (!available) return;
     const created = await posts.create(authorId, {

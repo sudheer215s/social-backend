@@ -22,8 +22,8 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
 | Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, **viewerLiked/viewerReposted**, cursor feeds          |
-| Graph         | Follow/unfollow, follow requests, blocks, mutes, **cursor pagination** on follower lists, cascade on erase                           |
-| Timeline      | Fan-out on write, follow backfill, large-account pull, block/mute filter, **cursor home timeline**                                   |
+| Graph         | Follow/unfollow + **churn guards**, follow requests, blocks, mutes, cursor lists, cascade on erase                                   |
+| Timeline      | Fan-out, rebuild via **recent-ids batch**, large-account pull, block/mute filter, cursor home                                        |
 | Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                             |
 | Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
 | Observability | HTTP RED; **X-Request-Id** in logs; **OTLP traces** to Jaeger when collector is up                                                   |
@@ -245,6 +245,21 @@ traceparent: 00-<traceid>-<spanid>-<flags>   # accepted, spanned, and forwarded
 ### Duplicate post guard
 
 Identical non-empty top-level content from the same author within **24h** returns **409** with `type` `…/problems/duplicate-content` (`POST_DUPLICATE_WINDOW_HOURS`, disable with `POST_DUPLICATE_DETECT=0`).
+
+### Follow churn
+
+- Re-follow the same user within **60m** of unfollow → **429** `…/problems/follow-churn`
+- More than **40** follows / requests in **15m** → **429** (burst)
+- Tunable: `FOLLOW_CHURN_PAIR_MINUTES`, `FOLLOW_CHURN_BURST_*`; off with `FOLLOW_CHURN_DETECT=0`
+
+### Timeline rebuild primitive
+
+```http
+GET /v1/posts/recent-ids?authorIds=u1,u2&perAuthor=20&limit=400
+→ { "ids": ["…"] }
+```
+
+Uses a per-author lateral scan (≤20 each) so rebuilds stay O(authors × perAuthor).
 
 ```http
 GET /v1/posts?authorId=…&limit=20&cursor=…

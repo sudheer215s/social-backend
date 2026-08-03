@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -43,6 +45,8 @@ export class GraphService {
     if (!target || target.status !== 'active') {
       throw new NotFoundException('User not found');
     }
+
+    await this.assertNotFollowChurn(followerId, followeeId);
 
     return withTransaction(this.pool, async (client) => {
       const blocked = await client.query(
@@ -135,6 +139,81 @@ export class GraphService {
         [followerId, followeeId],
       );
     });
+  }
+
+  /**
+   * Follow-churn heuristic: re-follow the same user too soon after unfollow,
+   * or too many follow edges created in a short window.
+   * Uses outbox history (best-effort; fails open if outbox is empty/unavailable).
+   */
+  private async assertNotFollowChurn(
+    followerId: string,
+    followeeId: string,
+  ): Promise<void> {
+    if (process.env.FOLLOW_CHURN_DETECT === '0') return;
+
+    const pairMinutes = Number(process.env.FOLLOW_CHURN_PAIR_MINUTES ?? 60);
+    const pairWindow =
+      Number.isFinite(pairMinutes) && pairMinutes > 0
+        ? Math.min(pairMinutes, 24 * 60)
+        : 60;
+
+    try {
+      const recentUnfollow = await this.pool.query(
+        `SELECT 1 FROM graph.outbox
+         WHERE event_type = 'user.unfollowed'
+           AND payload->>'followerId' = $1
+           AND payload->>'followeeId' = $2
+           AND created_at > now() - ($3::text || ' minutes')::interval
+         LIMIT 1`,
+        [followerId, followeeId, String(pairWindow)],
+      );
+      if ((recentUnfollow.rowCount ?? 0) > 0) {
+        throw new HttpException(
+          {
+            type: 'https://api.social.example.com/problems/follow-churn',
+            title: 'Follow churn limited',
+            status: 429,
+            detail: `Cannot re-follow the same user within ${pairWindow} minutes of unfollowing`,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      const burstLimit = Number(process.env.FOLLOW_CHURN_BURST_LIMIT ?? 40);
+      const burstMinutes = Number(process.env.FOLLOW_CHURN_BURST_MINUTES ?? 15);
+      const limit =
+        Number.isFinite(burstLimit) && burstLimit > 0 ? burstLimit : 40;
+      const burstWin =
+        Number.isFinite(burstMinutes) && burstMinutes > 0
+          ? Math.min(burstMinutes, 120)
+          : 15;
+
+      const burst = await this.pool.query<{ c: string }>(
+        `SELECT count(*)::text AS c FROM graph.outbox
+         WHERE event_type IN ('user.followed', 'follow.requested')
+           AND (
+             payload->>'followerId' = $1
+             OR payload->>'requesterId' = $1
+           )
+           AND created_at > now() - ($2::text || ' minutes')::interval`,
+        [followerId, String(burstWin)],
+      );
+      if (Number(burst.rows[0]?.c ?? 0) >= limit) {
+        throw new HttpException(
+          {
+            type: 'https://api.social.example.com/problems/follow-churn',
+            title: 'Follow velocity limited',
+            status: 429,
+            detail: `Too many follows in the last ${burstWin} minutes`,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      // Fail open on query/infra errors
+    }
   }
 
   /** Target accepts a pending request → follows + user.followed */

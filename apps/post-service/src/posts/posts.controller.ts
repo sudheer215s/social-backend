@@ -61,6 +61,32 @@ export class PostsController {
     return { states };
   }
 
+  /**
+   * Internal/timeline: recent top-level post IDs for many authors (bounded).
+   * Query: authorIds=uuid,uuid&perAuthor=20&limit=400&before=&since=
+   */
+  @Get('recent-ids')
+  async recentIds(
+    @Query('authorIds') authorIds?: string,
+    @Query('perAuthor') perAuthor?: string,
+    @Query('limit') limit?: string,
+    @Query('before') before?: string,
+    @Query('since') since?: string,
+  ) {
+    const ids = (authorIds ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const postIds = await this.posts.recentIdsByAuthors({
+      authorIds: ids,
+      ...(perAuthor ? { perAuthor: Number(perAuthor) } : {}),
+      ...(limit ? { limit: Number(limit) } : {}),
+      ...(before ? { beforeId: before } : {}),
+      ...(since ? { sinceId: since } : {}),
+    });
+    return { ids: postIds };
+  }
+
   @Get(':id/replies')
   @UseGuards(OptionalJwtAuthGuard)
   async replies(

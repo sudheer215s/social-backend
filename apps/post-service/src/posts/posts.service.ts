@@ -477,6 +477,49 @@ export class PostsService {
   }
 
   /**
+   * Timeline rebuild/pull primitive (design GetRecentPostIdsByAuthors).
+   * Per-author lateral limit keeps work bounded for large follow sets.
+   */
+  async recentIdsByAuthors(input: {
+    authorIds: string[];
+    perAuthor?: number;
+    limit?: number;
+    /** UUIDv7 exclusive lower bound (older posts only when paging). */
+    beforeId?: string;
+    /** UUIDv7 exclusive upper bound as “since” (id > sinceId). */
+    sinceId?: string;
+  }): Promise<string[]> {
+    const authors = [...new Set(input.authorIds)]
+      .filter((id) => typeof id === 'string' && id.length > 0)
+      .slice(0, 1000);
+    if (authors.length === 0) return [];
+
+    const perAuthor = Math.min(Math.max(input.perAuthor ?? 20, 1), 50);
+    const limit = Math.min(Math.max(input.limit ?? 400, 1), 500);
+    const beforeId = input.beforeId ?? null;
+    const sinceId = input.sinceId ?? null;
+
+    const rows = await this.pool.query<{ id: string }>(
+      `SELECT p.id
+       FROM unnest($1::uuid[]) AS a(author_id)
+       CROSS JOIN LATERAL (
+         SELECT id FROM post.posts
+          WHERE author_id = a.author_id
+            AND deleted_at IS NULL
+            AND reply_to_id IS NULL
+            AND ($2::uuid IS NULL OR id < $2::uuid)
+            AND ($3::uuid IS NULL OR id > $3::uuid)
+          ORDER BY id DESC
+          LIMIT $4
+       ) AS p
+       ORDER BY p.id DESC
+       LIMIT $5`,
+      [authors, beforeId, sinceId, perAuthor, limit],
+    );
+    return rows.rows.map((r) => r.id);
+  }
+
+  /**
    * Hydrate by ids. Optional viewerId attaches liked/reposted flags.
    * No visibility check — timeline/gateway already authorized the viewer.
    */

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/unbound-method */
 import { TimelineService } from './timeline.service';
 import type { TimelineStore } from './timeline.store';
 
@@ -26,18 +27,18 @@ describe('TimelineService.backfillOnFollow', () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        posts: [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }],
+        ids: ['p1', 'p2', 'p3'],
       }),
     });
     const original = globalThis.fetch;
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = fetchMock;
 
     try {
       const svc = new TimelineService(store, 'http://graph', 'http://post');
       const n = await svc.backfillOnFollow('follower', 'followee', 50);
       expect(n).toBe(2);
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://post/v1/posts?authorId=followee&limit=50',
+        expect.stringContaining('/v1/posts/recent-ids?'),
       );
       expect(store.fanoutIfExists).toHaveBeenCalledTimes(3);
     } finally {

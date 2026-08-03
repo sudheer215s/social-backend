@@ -52,7 +52,11 @@ export class TimelineService {
     if (!(await this.store.exists(followerId))) {
       return 0;
     }
-    const postIds = await this.fetchRecentPostIds(followeeId, limit);
+    const postIds = await this.fetchRecentPostIdsByAuthors(
+      [followeeId],
+      limit,
+      limit,
+    );
     let written = 0;
     for (const postId of postIds) {
       if (await this.store.fanoutIfExists(followerId, postId)) {
@@ -149,21 +153,12 @@ export class TimelineService {
         materialiseAuthors.push(authorId);
       }
     }
-    const postIds: string[] = [];
-    for (const authorId of materialiseAuthors) {
-      const res = await fetch(
-        `${this.postBaseUrl}/v1/posts?authorId=${encodeURIComponent(authorId)}&limit=20`,
-      );
-      if (!res.ok) continue;
-      const json = (await res.json()) as {
-        posts?: { id: string }[];
-      };
-      for (const p of json.posts ?? []) {
-        postIds.push(p.id);
-      }
-    }
-    postIds.sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
-    await this.store.replaceTimeline(userId, postIds.slice(0, 400));
+    const postIds = await this.fetchRecentPostIdsByAuthors(
+      materialiseAuthors,
+      20,
+      400,
+    );
+    await this.store.replaceTimeline(userId, postIds);
   }
 
   private async isLargeAccount(userId: string): Promise<boolean> {
@@ -191,12 +186,12 @@ export class TimelineService {
       }
       if (large.length >= 10) break;
     }
-    const postIds: string[] = [];
-    for (const authorId of large) {
-      const ids = await this.fetchRecentPostIds(authorId, Math.min(limit, 20));
-      postIds.push(...ids);
-    }
-    return postIds;
+    if (large.length === 0) return [];
+    return this.fetchRecentPostIdsByAuthors(
+      large,
+      Math.min(limit, 20),
+      Math.min(limit * 3, 100),
+    );
   }
 
   private async fetchSuppressedAuthorIds(userId: string): Promise<Set<string>> {
@@ -253,19 +248,47 @@ export class TimelineService {
     }
   }
 
-  private async fetchRecentPostIds(
-    authorId: string,
+  /**
+   * Uses post-service lateral recent-ids (design GetRecentPostIdsByAuthors).
+   * Falls back to per-author list if the batch route is unavailable.
+   */
+  private async fetchRecentPostIdsByAuthors(
+    authorIds: string[],
+    perAuthor: number,
     limit: number,
   ): Promise<string[]> {
+    if (authorIds.length === 0) return [];
     try {
+      const q = new URLSearchParams({
+        authorIds: authorIds.join(','),
+        perAuthor: String(perAuthor),
+        limit: String(limit),
+      });
       const res = await fetch(
-        `${this.postBaseUrl}/v1/posts?authorId=${encodeURIComponent(authorId)}&limit=${limit}`,
+        `${this.postBaseUrl}/v1/posts/recent-ids?${q.toString()}`,
       );
-      if (!res.ok) return [];
-      const json = (await res.json()) as { posts?: { id: string }[] };
-      return (json.posts ?? []).map((p) => p.id);
+      if (res.ok) {
+        const json = (await res.json()) as { ids?: string[] };
+        return json.ids ?? [];
+      }
     } catch {
-      return [];
+      // fall through
     }
+    // Fallback: N sequential author feeds
+    const postIds: string[] = [];
+    for (const authorId of authorIds) {
+      try {
+        const res = await fetch(
+          `${this.postBaseUrl}/v1/posts?authorId=${encodeURIComponent(authorId)}&limit=${perAuthor}`,
+        );
+        if (!res.ok) continue;
+        const json = (await res.json()) as { posts?: { id: string }[] };
+        for (const p of json.posts ?? []) postIds.push(p.id);
+      } catch {
+        // skip author
+      }
+    }
+    postIds.sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+    return postIds.slice(0, limit);
   }
 }
