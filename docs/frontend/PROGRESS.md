@@ -15,10 +15,12 @@ Phase F0 (Foundation) — in progress.
 | F0-T02 | Tailwind + design tokens | CSS vars light/dark; WCAG AA contrast unit tests                |
 | F0-T03 | ESLint layer boundaries  | no-restricted-imports + ban fetch; assert script                |
 | F0-T04 | OpenAPI → TS types       | `openapi/openapi.json` + `web/api-client/generated/schema.ts`   |
+| F0-T05 | api-client errors+tokens | problem+json, synthetic errors, memory-only token store         |
 
 ### Active next
 
-- F0-T05–T07 api-client + single-flight refresh (F0 acceptance)
+- F0-T06 request pipeline
+- F0-T07 single-flight refresh (F0 acceptance: 20 parallel 401s)
 
 ### Run
 
