@@ -70,11 +70,6 @@ export async function request<T = unknown>(
   let didRefreshRetry = false;
 
   for (;;) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), deadlineMs);
-    const onAbort = () => controller.abort();
-    options.signal?.addEventListener('abort', onAbort);
-
     const headers: Record<string, string> = {
       accept: 'application/json',
       ...options.headers,
@@ -99,23 +94,35 @@ export async function request<T = unknown>(
     }
 
     let res: Response;
+    let timedOut = false;
     try {
       const init: RequestInit = {
         method,
         headers,
         credentials: options.public ? 'omit' : 'include',
-        signal: controller.signal,
       };
+      // Only forward caller AbortSignal (same realm). Deadlines use Promise.race
+      // so jsdom + MSW undici do not fight over AbortSignal instanceof checks.
+      if (options.signal) {
+        init.signal = options.signal;
+      }
       if (body !== undefined) {
         init.body = body;
       }
-      res = await fetchFn(url, init);
-    } catch (err) {
-      clearTimeout(timeout);
-      options.signal?.removeEventListener('abort', onAbort);
 
-      if (controller.signal.aborted && !options.signal?.aborted) {
+      res = await Promise.race([
+        fetchFn(url, init),
+        sleep(deadlineMs).then(() => {
+          timedOut = true;
+          throw new TimeoutError();
+        }),
+      ]);
+    } catch (err) {
+      if (err instanceof TimeoutError || timedOut) {
         throw new TimeoutError();
+      }
+      if (options.signal?.aborted) {
+        throw err instanceof Error ? err : new NetworkError('aborted');
       }
       if (
         shouldRetry({
@@ -132,9 +139,6 @@ export async function request<T = unknown>(
       throw err instanceof NetworkError
         ? err
         : new NetworkError(err instanceof Error ? err.message : 'fetch failed');
-    } finally {
-      clearTimeout(timeout);
-      options.signal?.removeEventListener('abort', onAbort);
     }
 
     extractSideChannel(res.headers, options.rateLimitScope ?? path);

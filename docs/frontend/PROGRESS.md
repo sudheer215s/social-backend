@@ -18,11 +18,12 @@ Phase F0 (Foundation) — in progress.
 | F0-T05 | api-client errors+tokens | problem+json, synthetic errors, memory-only token store         |
 | F0-T06 | request pipeline         | deadlines, retry policy, X-Degraded / RateLimit side channel    |
 | F0-T07 | single-flight refresh    | **20 parallel 401s → 1 refresh**; post-lock re-check; reuse msg |
+| F0-T08 | MSW + SessionProbe       | `useMe` + MSW GET /v1/me; `/home` CSR shell                     |
 
 ### Active next
 
-- F0-T08 MSW + trivial authenticated screen
 - F0-T09 UI kit seed
+- Phase F1 session machine / auth forms
 
 ### Run
 
@@ -43,3 +44,5 @@ pnpm --filter @social/web build
 - Layer boundaries use `no-restricted-imports` + `no-restricted-globals` (eslint-plugin-boundaries v7 API was unstable for our patterns); asserted via `scripts/assert-lint-boundaries.mjs`.
 - On 401 the client clears the rejected access token before `refresh()` so the post-lock re-check only succeeds when another tab installed a _new_ token.
 - Network errors during refresh never clear the session; only explicit 401 on `/v1/auth/refresh` does.
+- Request deadlines use `Promise.race` (not AbortSignal on fetch) so jsdom + MSW/undici do not hit AbortSignal realm mismatches.
+- F0 exit criteria met: trivial authenticated screen against MSW; 20-parallel-401 refresh test green.

@@ -98,6 +98,7 @@ export default tseslint.config(
   // features/ — must go through data/, never api-client directly
   {
     files: ['features/**/*.{ts,tsx}'],
+    ignores: ['features/**/*.{test,spec}.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',

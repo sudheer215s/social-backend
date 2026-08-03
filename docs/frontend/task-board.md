@@ -12,14 +12,14 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 | F0-T05 | F0    | api-client: `ApiError` / `NetworkError` + token store        | Unit tests: expiry margin, clear, synthetic problem                           | done   |
 | F0-T06 | F0    | api-client: request pipeline (deadline, retry, X-Degraded)   | Unit tests: retry policy, header side channel                                 | done   |
 | F0-T07 | F0    | Single-flight refresh + cross-tab lock                       | **20 parallel 401s → exactly one refresh**                                    | done   |
-| F0-T08 | F0    | MSW skeleton + trivial authenticated screen                  | Screen renders against MSW end-to-end                                         | todo   |
+| F0-T08 | F0    | MSW skeleton + trivial authenticated screen                  | Screen renders against MSW end-to-end                                         | done   |
 | F0-T09 | F0    | UI kit seed (Button + Skeleton) + Storybook stub             | Components render; axe path ready                                             | todo   |
 | F1-T01 | F1    | Session state machine + SessionBoundary                      | Every transition unit-tested                                                  | todo   |
 
 ## Active next
 
-1. F0-T08 (MSW + trivial authenticated screen)
-2. F0-T09 (UI kit seed)
+1. F0-T09 (UI kit seed — Button + Skeleton)
+2. Then Phase F1 (session machine, auth forms)
 
 ## Notes
 
