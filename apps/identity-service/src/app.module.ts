@@ -42,6 +42,8 @@ import { MetricsController } from './metrics.controller';
 import { createDevKeyRing, JwtKeyRing } from './tokens/jwt-keys';
 import { SessionService } from './tokens/session.service';
 import { IdentityGrpcController } from './grpc/identity.grpc.controller';
+import { ReportsController } from './reports/reports.controller';
+import { ReportsService } from './reports/reports.service';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 
@@ -55,6 +57,7 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
   controllers: [
     AuthController,
     UsersController,
+    ReportsController,
     HealthController,
     IdentityGrpcController,
     MetricsController,
@@ -164,6 +167,11 @@ export const SID_REVOCATION = Symbol('SID_REVOCATION');
         new UsersService(pool, sessions),
     },
     {
+      provide: ReportsService,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => new ReportsService(pool),
+    },
+    {
       provide: CounterService,
       inject: [PG_POOL],
       useFactory: (pool: Pool) => new CounterService(pool),
@@ -221,7 +229,6 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
         worker: this.erasure,
         intervalMs: Number(process.env.ERASURE_WORKER_INTERVAL_MS ?? 60_000),
         onError: (err) => {
-          // eslint-disable-next-line no-console
           console.error('[erasure-worker]', err);
         },
       }).stop;
@@ -234,7 +241,6 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
           process.env.COUNTER_RECONCILE_INTERVAL_MS ?? 5 * 60_000,
         ),
         onError: (err) => {
-          // eslint-disable-next-line no-console
           console.error('[counter-reconcile]', err);
         },
       }).stop;
@@ -252,11 +258,9 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
         producer: this.producer,
         intervalMs: 500,
         onError: (err) => {
-          // eslint-disable-next-line no-console
           console.error('[identity-outbox-relay]', err);
         },
         onPoison: (event, error) => {
-          // eslint-disable-next-line no-console
           console.error(
             `[identity-outbox-poison] id=${event.id} type=${event.eventType}`,
             error,
@@ -278,19 +282,16 @@ export class AppModule implements OnModuleInit, OnModuleDestroy {
           });
         },
         onDlq: (info) => {
-          // eslint-disable-next-line no-console
           console.error(
             `[identity-counters-dlq] ${info.errorClass}: ${info.errorMessage}`,
             info.envelope.eventId,
           );
         },
         onError: (err) => {
-          // eslint-disable-next-line no-console
           console.error('[identity-counters]', err);
         },
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.warn('[identity-service] Kafka not fully started', err);
     }
   }

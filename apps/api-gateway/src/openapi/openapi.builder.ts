@@ -141,6 +141,26 @@ export function buildGatewayOpenApi(): Record<string, unknown> {
         },
       },
     },
+    '/v1/users/me/export': {
+      get: {
+        tags: ['users'],
+        summary: 'Export account data (sync JSON package)',
+        security: bearer,
+        responses: { '200': { description: 'OK' } },
+      },
+    },
+    '/v1/reports': {
+      post: {
+        tags: ['moderation'],
+        summary: 'File abuse report (user or post)',
+        security: bearer,
+        responses: {
+          '201': { description: 'Created' },
+          '400': { description: 'Duplicate / invalid' },
+          '429': { description: 'Rate limited' },
+        },
+      },
+    },
     '/v1/version': {
       get: {
         tags: ['ops'],

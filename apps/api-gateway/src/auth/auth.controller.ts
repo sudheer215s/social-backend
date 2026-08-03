@@ -13,10 +13,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { outboundRequestHeaders } from '@social/platform-telemetry';
 import type { AuthedRequest } from './auth.guard';
 import { AuthGuard } from './auth.guard';
 import { IdentityGrpcClient } from '../proxy/identity.grpc.client';
 import { IdentityProxy } from '../proxy/identity.proxy';
+import { fetchUpstream } from '../proxy/upstream';
 import { RateLimitGuard } from '../rate-limit/rate-limit.guard';
 import {
   clearRefreshCookie,
@@ -173,6 +175,86 @@ export class AuthController {
   @Get('.well-known/jwks.json')
   wellKnownJwks() {
     return this.forward('GET', '/.well-known/jwks.json');
+  }
+
+  @Get('v1/users/me/export')
+  @UseGuards(AuthGuard)
+  async exportMe(@Req() req: AuthedRequest) {
+    const authorization = this.bearer(req);
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new HttpException({ message: 'Unauthorized' }, 401);
+    }
+    const authHdr = authorization ? { authorization } : {};
+
+    const [profile, posts, following, followers] = await Promise.all([
+      this.forward('GET', '/v1/users/me', authHdr),
+      this.forwardContent(
+        'POST_BASE_URL',
+        'http://127.0.0.1:3002',
+        'GET',
+        `/v1/posts?authorId=${encodeURIComponent(userId)}&limit=100`,
+        authHdr,
+      ),
+      this.forwardContent(
+        'GRAPH_BASE_URL',
+        'http://127.0.0.1:3003',
+        'GET',
+        `/v1/graph/following/${encodeURIComponent(userId)}?limit=100`,
+        authHdr,
+      ),
+      this.forwardContent(
+        'GRAPH_BASE_URL',
+        'http://127.0.0.1:3003',
+        'GET',
+        `/v1/graph/followers/${encodeURIComponent(userId)}?limit=100`,
+        authHdr,
+      ),
+    ]);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      format: 'social-backend-user-export-v1',
+      user: (profile as { user?: unknown })?.user ?? profile,
+      posts: (posts as { posts?: unknown })?.posts ?? [],
+      following: (following as { items?: unknown })?.items ?? [],
+      followers: (followers as { items?: unknown })?.items ?? [],
+    };
+  }
+
+  /** Best-effort content/graph fetch for export (no throw on soft failures). */
+  private async forwardContent(
+    baseEnv: string,
+    fallback: string,
+    method: string,
+    path: string,
+    options?: { authorization?: string },
+  ): Promise<unknown> {
+    try {
+      const base = process.env[baseEnv] ?? fallback;
+      const headers = outboundRequestHeaders({ accept: 'application/json' });
+      if (options?.authorization) {
+        headers.authorization = options.authorization;
+      }
+      const res = await fetchUpstream(`${base}${path}`, {
+        method,
+        headers,
+      });
+      if (!res.ok) return {};
+      return (await res.json()) as unknown;
+    } catch {
+      return {};
+    }
+  }
+
+  @Post('v1/reports')
+  @UseGuards(AuthGuard, RateLimitGuard)
+  createReport(@Req() req: AuthedRequest, @Body() body: unknown) {
+    const authorization = this.bearer(req);
+    return this.forward('POST', '/v1/reports', {
+      body,
+      ...(authorization ? { authorization } : {}),
+    });
   }
 
   @Get('v1/users/me')

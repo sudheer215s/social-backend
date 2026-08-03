@@ -18,17 +18,17 @@ Nine apps (HTTP gateway, realtime gateway, six domain services, plus `hello-serv
 
 ### Implemented surface
 
-| Area          | Capabilities                                                                                                                         |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Identity      | Register/login/refresh, JWT + JWKS, profiles, visibility (`public` / `followers`), deactivate → erasure worker, follow/post counters |
-| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, **viewerLiked/viewerReposted**, cursor feeds          |
-| Graph         | Follow/unfollow + **churn guards**, follow requests, blocks, mutes, cursor lists, cascade on erase                                   |
-| Timeline      | Fan-out, rebuild via **recent-ids batch**, large-account pull, block/mute filter, cursor home                                        |
-| Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                             |
-| Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                            |
-| Observability | HTTP RED; **X-Request-Id** in logs; **OTLP traces** to Jaeger when collector is up                                                   |
-| Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                           |
-| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, RFC 9457, **write velocity limits**, OpenAPI)         |
+| Area          | Capabilities                                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Identity      | Auth, profiles, visibility, deactivate/erasure, counters, **abuse reports**                                                  |
+| Posts         | Create/list/delete, replies/threads, reposts/quotes, mentions/hashtags, likes, **viewerLiked/viewerReposted**, cursor feeds  |
+| Graph         | Follow/unfollow + **churn guards**, follow requests, blocks, mutes, cursor lists, cascade on erase                           |
+| Timeline      | Fan-out, rebuild via **recent-ids batch**, large-account pull, block/mute filter, cursor home                                |
+| Notifications | Aggregation, Redis stream pointers, block/mute suppress, **cursor list**                                                     |
+| Realtime      | Tickets, SSE + WebSocket, session revoke / max age, Prometheus `/metrics`                                                    |
+| Observability | HTTP RED; **X-Request-Id** in logs; **OTLP traces** to Jaeger when collector is up                                           |
+| Search        | ES post/user index; **public-only post filter**; private authors purged on visibility flip                                   |
+| Edge          | API gateway (JWT, email_verified, trusted XFF, httpOnly `rt`, Idempotency-Key, RFC 9457, **write velocity limits**, OpenAPI) |
 
 ### Explicit non-goals (v2 design)
 
@@ -42,10 +42,20 @@ Media pipeline, DMs, ML ranking, multi-region active-active, ads, automated mode
 | Lint / typecheck / build        | GitHub Actions CI                          | `pnpm lint` · `pnpm typecheck` · `pnpm build` |
 | Integration (DB/Redis/ES/Kafka) | **Local only** (or Actions → Run workflow) | `pnpm compose:up && pnpm test:integration`    |
 | Full stack smoke                | Manual Actions / local                     | `pnpm compose:stack && pnpm smoke:e2e`        |
+| Deploy config check             | Local                                      | `pnpm deploy:check`                           |
+
+### Data export & reports
+
+```http
+GET  /v1/users/me/export     # profile + recent posts + following/followers (sync JSON)
+POST /v1/reports             # { "targetType": "user"|"post", "targetId": "…", "reason": "spam", "details": "…" }
+```
+
+Reports are rate-limited and deduped (one open report per target / 24h).
 
 ### Known gaps (not done yet)
 
-Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing. Full auto-instrumentation (DB/Kafka) optional later.
+Replace example hosts in prod overlays with real domains; pin image digests via `pnpm k8s:pin-digests` when publishing. Full auto-instrumentation (DB/Kafka) optional later. Async export job + signed download URL (design job path) not built — current export is synchronous JSON.
 
 ---
 

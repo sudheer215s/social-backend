@@ -40,6 +40,7 @@
     "dlq:list": "node scripts/dlq-inspect.mjs list",
     "dlq:redrive": "node scripts/dlq-inspect.mjs redrive",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
+    "deploy:check": "node scripts/verify-deploy-config.mjs",
     "routes:list": "node scripts/list-routes.mjs",
     "openapi:export": "node scripts/export-openapi.mjs",
     "k8s:apply": "kubectl apply -k deploy/k8s/",
