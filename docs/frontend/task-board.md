@@ -10,16 +10,16 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 | F0-T03 | F0    | ESLint six-layer boundaries + ban `fetch` outside api-client | Lint fails on deliberate layer violation and stray `fetch`                    | done   |
 | F0-T04 | F0    | OpenAPI → TypeScript types (`pnpm api:types`)                | Generated types from committed spec; CI-ready script                          | done   |
 | F0-T05 | F0    | api-client: `ApiError` / `NetworkError` + token store        | Unit tests: expiry margin, clear, synthetic problem                           | done   |
-| F0-T06 | F0    | api-client: request pipeline (deadline, retry, X-Degraded)   | Unit tests: retry policy, header side channel                                 | todo   |
-| F0-T07 | F0    | Single-flight refresh + cross-tab lock                       | **20 parallel 401s → exactly one refresh**                                    | todo   |
+| F0-T06 | F0    | api-client: request pipeline (deadline, retry, X-Degraded)   | Unit tests: retry policy, header side channel                                 | done   |
+| F0-T07 | F0    | Single-flight refresh + cross-tab lock                       | **20 parallel 401s → exactly one refresh**                                    | done   |
 | F0-T08 | F0    | MSW skeleton + trivial authenticated screen                  | Screen renders against MSW end-to-end                                         | todo   |
 | F0-T09 | F0    | UI kit seed (Button + Skeleton) + Storybook stub             | Components render; axe path ready                                             | todo   |
 | F1-T01 | F1    | Session state machine + SessionBoundary                      | Every transition unit-tested                                                  | todo   |
 
 ## Active next
 
-1. F0-T06 (request pipeline)
-2. F0-T07 (single-flight refresh — F0 acceptance)
+1. F0-T08 (MSW + trivial authenticated screen)
+2. F0-T09 (UI kit seed)
 
 ## Notes
 
