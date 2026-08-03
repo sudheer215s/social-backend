@@ -18,14 +18,27 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 | F1-T02 | F1    | Login / register forms + auth mutations                      | Forms map problem+json; anti-enumeration copy                                 | done   |
 | F1-T03 | F1    | Auth routes + ?next= guards                                  | Unauthenticated /home redirects with next preserved                           | done   |
 | F1-T04 | F1    | Logout + UnverifiedGate + app shell                          | Logout clears tokens; unverified is normal state                              | done   |
-| F1-T05 | F1    | Password reset + verify-email flows                          | Forgot always same copy; verify unlocks gates                                 | todo   |
+| F1-T05 | F1    | Password reset + verify-email flows                          | Forgot always same copy; verify unlocks gates                                 | doing  |
+
+### F1-T05 breakdown
+
+One commit per row. Each row is independently testable.
+
+| ID      | Task                                                             | Verifiable output                                                                                                        | Status |
+| ------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------ |
+| F1-T05a | `data/session/password.ts` mutations + Zod schemas               | Unit: forgot resolves identically for 202/400/404; rethrows 429/5xx/network. Reset clears tokens. Confirm-mismatch fails | done   |
+| F1-T05b | `ForgotPasswordForm` + `/forgot-password` route                  | Unit: unknown and known email render byte-identical copy; 429 renders wait copy; submit disabled while pending           | todo   |
+| F1-T05c | `ResetPasswordForm` + `/reset-password?token=` route             | Unit: invalid/expired token → recoverable message + link to request new; success → onSuccess (login)                     | todo   |
+| F1-T05d | `VerifyEmailPanel` + `/verify-email?token=` route + MSW handlers | Unit: auto-verifies on mount; verified state invalidates `me` so `UnverifiedGate` unlocks; invalid token is not an error | todo   |
 
 ## Active next
 
-1. F1-T05 (password reset + verify email)
-2. F2 timeline read path (against MSW)
+1. F2 timeline read path (against MSW)
 
 ## Notes
 
 - Build against MSW first; real backend is an F1 exit criterion.
 - Raise backend F1 (httpOnly refresh cookie) and F3 (SSR rate limit) early — tracked separately from FE board.
+- **Backend gap (raised during F1-T05):** the OpenAPI spec has no _resend verification email_ endpoint
+  (`/v1/auth/verify-email` only consumes a token). The banner therefore cannot offer "resend" yet.
+  Frontend will not invent the route; tracked as a backend ask.
