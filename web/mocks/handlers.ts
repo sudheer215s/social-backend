@@ -56,6 +56,66 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  http.post(`${API}/v1/auth/password/forgot`, async ({ request }) => {
+    const body = (await request.json()) as { email?: string };
+    // Unconditional 202 is deliberate: any branch on account existence
+    // re-introduces enumeration.
+    if (body.email === 'ratelimited@example.com') {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Too many requests',
+          status: 429,
+          retryAfter: 60,
+        },
+        {
+          status: 429,
+          headers: { 'content-type': 'application/problem+json' },
+        },
+      );
+    }
+    return new HttpResponse(null, { status: 202 });
+  }),
+
+  http.post(`${API}/v1/auth/password/reset`, async ({ request }) => {
+    const body = (await request.json()) as {
+      token?: string;
+      password?: string;
+    };
+    if (body.token === 'expired-token') {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Invalid or expired token',
+          status: 400,
+        },
+        {
+          status: 400,
+          headers: { 'content-type': 'application/problem+json' },
+        },
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post(`${API}/v1/auth/verify-email`, async ({ request }) => {
+    const body = (await request.json()) as { token?: string };
+    if (body.token === 'expired-token') {
+      return HttpResponse.json(
+        {
+          type: 'about:blank',
+          title: 'Invalid or expired token',
+          status: 400,
+        },
+        {
+          status: 400,
+          headers: { 'content-type': 'application/problem+json' },
+        },
+      );
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get(`${API}/v1/me`, ({ request }) => {
     const auth = request.headers.get('authorization');
     if (!auth?.startsWith('Bearer ')) {

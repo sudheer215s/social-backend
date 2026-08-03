@@ -18,7 +18,7 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 | F1-T02 | F1    | Login / register forms + auth mutations                      | Forms map problem+json; anti-enumeration copy                                 | done   |
 | F1-T03 | F1    | Auth routes + ?next= guards                                  | Unauthenticated /home redirects with next preserved                           | done   |
 | F1-T04 | F1    | Logout + UnverifiedGate + app shell                          | Logout clears tokens; unverified is normal state                              | done   |
-| F1-T05 | F1    | Password reset + verify-email flows                          | Forgot always same copy; verify unlocks gates                                 | doing  |
+| F1-T05 | F1    | Password reset + verify-email flows                          | Forgot always same copy; verify unlocks gates                                 | done   |
 
 ### F1-T05 breakdown
 
@@ -29,7 +29,7 @@ One commit per row. Each row is independently testable.
 | F1-T05a | `data/session/password.ts` mutations + Zod schemas               | Unit: forgot resolves identically for 202/400/404; rethrows 429/5xx/network. Reset clears tokens. Confirm-mismatch fails | done   |
 | F1-T05b | `ForgotPasswordForm` + `/forgot-password` route                  | Unit: unknown and known email render byte-identical copy; 429 renders wait copy; submit disabled while pending           | done   |
 | F1-T05c | `ResetPasswordForm` + `/reset-password?token=` route             | Unit: invalid/expired token → recoverable message + link to request new; success → onSuccess (login)                     | done   |
-| F1-T05d | `VerifyEmailPanel` + `/verify-email?token=` route + MSW handlers | Unit: auto-verifies on mount; verified state invalidates `me` so `UnverifiedGate` unlocks; invalid token is not an error | todo   |
+| F1-T05d | `VerifyEmailPanel` + `/verify-email?token=` route + MSW handlers | Unit: auto-verifies on mount; verified state invalidates `me` so `UnverifiedGate` unlocks; invalid token is not an error | done   |
 
 ## Active next
 
