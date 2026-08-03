@@ -5,7 +5,7 @@
 
 ## Status
 
-Phase F0 (Foundation) — in progress.
+Phase F1 (Auth + shell) — in progress. Phase F0 foundation complete.
 
 ### Done
 
@@ -21,11 +21,12 @@ Phase F0 (Foundation) — in progress.
 | F0-T08 | MSW + SessionProbe         | `useMe` + MSW GET /v1/me; `/home` CSR shell                     |
 | F0-T09 | UI Button + Skeleton       | CVA variants, tap-min, reduced-motion; Storybook deferred       |
 | F1-T01 | Session machine + boundary | Pure reducer + Zustand + boot silent refresh; /home gated       |
+| F1-T02 | Login / register forms     | RHF+Zod; mapAuthError anti-enumeration; `/login` `/register`    |
 
 ### Active next
 
-- F1-T02 auth forms
-- F1-T03 route guards with ?next=
+- F1-T03 route guards with `?next=`
+- Logout + UnverifiedGate
 
 ### Run
 
@@ -43,10 +44,11 @@ pnpm --filter @social/web build
 - Dev port **3100** to avoid clashing with api-gateway `:3000`.
 - Dark-mode accent is `blue-600` (37 99 235), not blue-500 — white label text needs ≥ 4.5:1.
 - Token RGB channels live in both `lib/tokens.ts` (tests) and `styles/globals.css` (runtime).
-- Layer boundaries use `no-restricted-imports` + `no-restricted-globals` (eslint-plugin-boundaries v7 API was unstable for our patterns); asserted via `scripts/assert-lint-boundaries.mjs`.
+- Layer boundaries use `no-restricted-imports` + `no-restricted-globals`; asserted via `scripts/assert-lint-boundaries.mjs`.
 - On 401 the client clears the rejected access token before `refresh()` so the post-lock re-check only succeeds when another tab installed a _new_ token.
 - Network errors during refresh never clear the session; only explicit 401 on `/v1/auth/refresh` does.
 - Request deadlines use `Promise.race` (not AbortSignal on fetch) so jsdom + MSW/undici do not hit AbortSignal realm mismatches.
 - F0 exit criteria met: trivial authenticated screen against MSW; 20-parallel-401 refresh test green.
 - Session store is Zustand in features; network for boot is `data/session/api` (features → data → api-client).
 - Network error during `refreshing` returns to `authenticated` (never logout).
+- Login 401 always maps to one form-level message (anti-enumeration); never field-level email hints.
