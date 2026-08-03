@@ -16,3 +16,5 @@ export {
   type SessionContext,
 } from './session-machine';
 export { bootSession, resetBootForTests } from './boot-session';
+export { LoginForm } from './LoginForm';
+export { RegisterForm } from './RegisterForm';

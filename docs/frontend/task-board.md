@@ -15,13 +15,13 @@ Workflow: [`../05-roadmap/WORKFLOW.md`](../05-roadmap/WORKFLOW.md) — task → 
 | F0-T08 | F0    | MSW skeleton + trivial authenticated screen                  | Screen renders against MSW end-to-end                                         | done   |
 | F0-T09 | F0    | UI kit seed (Button + Skeleton) + Storybook stub             | Components render; Storybook deferred; unit tests green                       | done   |
 | F1-T01 | F1    | Session state machine + SessionBoundary                      | Every transition unit-tested                                                  | done   |
-| F1-T02 | F1    | Login / register forms + auth mutations                      | Forms map problem+json; anti-enumeration copy                                 | todo   |
+| F1-T02 | F1    | Login / register forms + auth mutations                      | Forms map problem+json; anti-enumeration copy                                 | done   |
 | F1-T03 | F1    | Auth routes + ?next= guards                                  | Unauthenticated /home redirects with next preserved                           | todo   |
 
 ## Active next
 
-1. F1-T02 (login/register forms)
-2. F1-T03 (auth routes + ?next= guards)
+1. F1-T03 (auth routes + ?next= guards)
+2. F1-T04 logout + UnverifiedGate (next)
 
 ## Notes
 
