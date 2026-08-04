@@ -31,9 +31,22 @@ One commit per row. Each row is independently testable.
 | F1-T05c | `ResetPasswordForm` + `/reset-password?token=` route             | Unit: invalid/expired token → recoverable message + link to request new; success → onSuccess (login)                     | done   |
 | F1-T05d | `VerifyEmailPanel` + `/verify-email?token=` route + MSW handlers | Unit: auto-verifies on mount; verified state invalidates `me` so `UnverifiedGate` unlocks; invalid token is not an error | done   |
 
+### F2 breakdown (timeline read path)
+
+Sequenced from [`07-roadmap.md`](./07-roadmap.md) Phase F2 weeks 6–8. One commit per row.
+
+| ID     | Task                                                    | Verifiable output                                                                                           | Status |
+| ------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
+| F2-T01 | `useHomeTimeline` infinite query + MSW timeline handler | 10 pages paginated: no duplicates, no gaps; cursor passed through opaquely; `maxPages: 10` bounds the cache | done   |
+| F2-T02 | `PostCard` + shared relative-time ticker + tombstone    | One interval for N cards; memoised; unavailable posts render identical tombstone copy                       | done   |
+| F2-T03 | `TimelineList` + skeletons + `DegradedBanner`           | Renders pages against MSW; `X-Degraded` names what is stale; skeleton matches real layout                   | done   |
+| F2-T04 | Prefetch at 70% + `NewPostsPill` polling                | Next page requested before the sentinel; new posts never auto-injected into a scrolled list                 | todo   |
+| F2-T05 | Virtualisation + height cache by post ID                | `getItemKey` by ID; heights cached in `sessionStorage`; no remeasure on prepend                             | todo   |
+| F2-T06 | Scroll restoration on back-navigation                   | Heights restored **before** offset; exact offset after back from a post (risk FR3)                          | todo   |
+
 ## Active next
 
-1. F2 timeline read path (against MSW)
+1. F2-T04 prefetch at 70% + `NewPostsPill` polling
 
 ## Notes
 
@@ -42,3 +55,8 @@ One commit per row. Each row is independently testable.
 - **Backend gap (raised during F1-T05):** the OpenAPI spec has no _resend verification email_ endpoint
   (`/v1/auth/verify-email` only consumes a token). The banner therefore cannot offer "resend" yet.
   Frontend will not invent the route; tracked as a backend ask.
+- **api-client fix (F2-T01):** React Query hands every `queryFn` an `AbortSignal` minted by the
+  environment's global, which fails undici's `instanceof` brand check under jsdom and rejected the
+  request before it reached MSW. `request()` now probes the `Request`/`AbortSignal` pairing and falls
+  back to a `Promise.race` on `abort` when the signal cannot cross realms — cancellation still works,
+  the socket just stays open in that (test-only) case.

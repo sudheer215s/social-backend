@@ -1,12 +1,15 @@
 # Frontend Progress Memory
 
-**Last updated:** 2026-08-03
+**Last updated:** 2026-08-04
 **Branch:** `feature/frontend-implementation`
 
 ## Status
 
-Phase F1 (Auth + shell) — every F1 board task is implemented against MSW.
-151 unit/integration tests green; `typecheck`, `lint`, `build` clean.
+Phase F1 (Auth + shell) complete against MSW. Phase F2 (timeline read path) —
+the read path renders end to end at `/home`: data layer, `PostCard`, list,
+skeletons and the degraded banner. Remaining in F2: prefetch/new-posts pill,
+virtualisation, scroll restoration (F2-T04–T06).
+194 unit/integration tests green; `typecheck`, `lint`, `build` clean.
 
 ### Done
 
@@ -21,10 +24,14 @@ Phase F1 (Auth + shell) — every F1 board task is implemented against MSW.
 | F1-T05b    | Forgot-password UI         | `/forgot-password`; unconditional acknowledgement          |
 | F1-T05c    | Reset-password UI          | `/reset-password?token=`; missing token = expired token    |
 | F1-T05d    | Verify-email UI + MSW      | `/verify-email?token=`; invalidates `me` so gates unlock   |
+| F2-T01     | `useHomeTimeline` + mock   | Opaque cursors; `maxPages: 10`; 250-post MSW feed          |
+| F2-T02     | `PostCard` + tombstone     | Memoised; one shared 60 s ticker for N cards               |
+| F2-T03     | `TimelineList` + degraded  | Skeletons match layout; `X-Degraded` names what is stale   |
 
 ### Active next
 
-- Phase F2 timeline read path (`useInfiniteQuery`, `PostCard`, skeletons)
+- F2-T04 prefetch at 70% + `NewPostsPill` (no auto-injection into a scrolled list)
+- Then F2-T05 virtualisation, F2-T06 scroll restoration
 
 ### Blockers / backend asks
 
@@ -64,3 +71,15 @@ pnpm --filter @social/web build
   (ref guard) and only offers retry for failures that did not consume it.
 - Verify success invalidates `queryKeys.me`, which is what unlocks
   `UnverifiedGate` and hides the banner without a reload.
+- Cursors stay opaque: only the MSW handler ever decodes one, and the data layer
+  passes `next_cursor` back verbatim.
+- `request()` forwards a caller `AbortSignal` only when the fetch realm accepts
+  it (probed with `new Request`), otherwise races the `abort` event — React
+  Query's signal is jsdom's and undici rejects it outright.
+- A degraded response is not an error: the banner appears _beside_ the posts the
+  server did return, and dismissal is per-scope so a new scope re-shows it.
+- Tombstoned posts (deleted / blocked author / suspended) render identical copy;
+  the reason is deliberately not modelled, since telling them apart leaks what
+  the 404-not-403 rule conceals.
+- `PostCard` is memoised and takes no inline object/function props; relative
+  timestamps come from one module-level 60 s interval shared by every card.
