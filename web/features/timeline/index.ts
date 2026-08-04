@@ -4,3 +4,8 @@ export { DegradedBanner } from './DegradedBanner';
 export { NewPostsPill } from './NewPostsPill';
 export { PrefetchSentinel } from './PrefetchSentinel';
 export { VirtualTimeline } from './VirtualTimeline';
+export {
+  saveScrollOffset,
+  loadScrollOffset,
+  clearScrollOffset,
+} from './scroll-position';

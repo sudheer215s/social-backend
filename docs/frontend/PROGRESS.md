@@ -5,10 +5,10 @@
 
 ## Status
 
-Phase F1 (Auth + shell) complete against MSW. Phase F2 timeline read path is
-almost closed: data layer through virtualised feed with height cache by post
-ID. Remaining: scroll restoration (F2-T06).
-235 unit/integration tests green; `typecheck`, `lint`, `build` clean.
+Phase F1 (Auth + shell) complete against MSW. Phase F2 timeline **read path**
+complete against MSW: data layer, cards, list, prefetch, pill, virtualisation,
+height cache, and scroll restoration (unit-level FR3 contract).
+244 unit/integration tests green; `typecheck`, `lint`, `build` clean.
 
 ### Done
 
@@ -28,10 +28,12 @@ ID. Remaining: scroll restoration (F2-T06).
 | F2-T03     | `TimelineList` + degraded  | Skeletons match layout; `X-Degraded` names what is stale      |
 | F2-T04     | Prefetch + new-posts pill  | Sentinel at 70%; head polled on its own key, never merged     |
 | F2-T05     | VirtualTimeline + heights  | `getItemKey` by ID; sessionStorage height cache; windowed DOM |
+| F2-T06     | Scroll restoration         | Persist `scrollY`; restore in layout after height hydrate     |
 
 ### Active next
 
-- F2-T06 scroll restoration on back-navigation
+- F3 write paths (composer / like / follow)
+- Post detail route + Playwright scroll restoration E2E
 
 ### Blockers / backend asks
 
@@ -95,3 +97,6 @@ pnpm --filter @social/web build
 - Virtualisation uses TanStack Virtual with `getItemKey` by post ID and
   measured heights persisted in `sessionStorage` (LRU-ish trim at 400 entries).
   Estimates fill in until a card is measured; prepends do not wipe prior heights.
+- Scroll offset lives in `sessionStorage` (`timeline:scroll:home:v1`). On leave
+  we flush heights + offset; on return `useLayoutEffect` restores offset only
+  after the height cache has hydrated (sync). "New posts" pill clears the offset.

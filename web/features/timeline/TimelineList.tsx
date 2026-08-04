@@ -12,6 +12,7 @@ import {
 import { Button } from '@/ui';
 import { DegradedBanner } from './DegradedBanner';
 import { NewPostsPill } from './NewPostsPill';
+import { clearScrollOffset } from './scroll-position';
 import { TimelineSkeleton } from './TimelineSkeleton';
 import { VirtualTimeline } from './VirtualTimeline';
 
@@ -24,6 +25,7 @@ export function TimelineList() {
   function showNewPosts() {
     // Top first: the list is replaced under the reader either way, and landing
     // mid-feed in unfamiliar posts is worse than landing at a known top.
+    clearScrollOffset();
     window.scrollTo({ top: 0 });
     void refresh();
   }

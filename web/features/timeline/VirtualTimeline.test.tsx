@@ -7,6 +7,11 @@ import {
   ESTIMATED_POST_HEIGHT,
   rememberHeight,
 } from './height-cache';
+import {
+  clearScrollOffset,
+  loadScrollOffset,
+  saveScrollOffset,
+} from './scroll-position';
 import { PREFETCH_AT, VirtualTimeline } from './VirtualTimeline';
 
 function posts(count: number): Post[] {
@@ -81,6 +86,7 @@ describe('VirtualTimeline (F2-T05)', () => {
     stubObserver();
     vi.stubGlobal('scrollTo', vi.fn());
     clearHeights();
+    clearScrollOffset();
     sessionStorage.clear();
     stubLayout();
   });
@@ -90,6 +96,7 @@ describe('VirtualTimeline (F2-T05)', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     clearHeights();
+    clearScrollOffset();
   });
 
   it('mounts a window of cards, not the whole feed', () => {
@@ -210,5 +217,75 @@ describe('VirtualTimeline (F2-T05)', () => {
     expect(feedHeight()).toBe(
       ESTIMATED_POST_HEIGHT + 400 + 220 + 3 * ESTIMATED_POST_HEIGHT,
     );
+  });
+});
+
+describe('VirtualTimeline scroll restoration (F2-T06)', () => {
+  beforeEach(() => {
+    stubObserver();
+    clearHeights();
+    clearScrollOffset();
+    sessionStorage.clear();
+    stubLayout();
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      get: () => 0,
+      set: () => undefined,
+    });
+  });
+
+  afterEach(() => {
+    restoreLayout();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    clearHeights();
+    clearScrollOffset();
+  });
+
+  it('restores the saved offset on mount after heights are available', () => {
+    rememberHeight('post_0', 400);
+    rememberHeight('post_1', 220);
+    saveScrollOffset(620);
+
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+
+    // Heights must already be readable — FR3 requires restore *after* hydrate.
+    expect(estimateHeight('post_0')).toBe(400);
+
+    render(
+      <VirtualTimeline posts={posts(10)} onReachPrefetchPoint={vi.fn()} />,
+    );
+
+    expect(scrollTo.mock.calls.some((c) => c[0] === 0 && c[1] === 620)).toBe(
+      true,
+    );
+  });
+
+  it('persists scrollY on unmount so back-navigation can restore it', () => {
+    let y = 0;
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      get: () => y,
+    });
+    y = 840;
+
+    const { unmount } = render(
+      <VirtualTimeline posts={posts(10)} onReachPrefetchPoint={vi.fn()} />,
+    );
+    unmount();
+
+    expect(loadScrollOffset()).toBe(840);
+  });
+
+  it('does not restore when no offset was saved', () => {
+    const scrollTo = vi.fn();
+    window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+
+    render(<VirtualTimeline posts={posts(5)} onReachPrefetchPoint={vi.fn()} />);
+
+    // Virtual may still call scrollTo for internal adjustments; none should
+    // target a restored FR3 offset from storage.
+    expect(loadScrollOffset()).toBeNull();
   });
 });

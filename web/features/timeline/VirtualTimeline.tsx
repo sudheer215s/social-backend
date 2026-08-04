@@ -4,13 +4,15 @@
  * The virtualised feed. A 400-entry timeline of rich cards is thousands of DOM
  * nodes; without this, INP and memory both fail on mid-tier devices.
  * @see docs/frontend/04-modules/feature-modules.md — `timeline`
+ * @see docs/frontend/03-flows.md §5 — scroll restoration
  */
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { Post } from '@/data/queries/timeline';
 import { PostCard } from '@/features/post';
-import { estimateHeight, rememberHeight } from './height-cache';
+import { estimateHeight, flushHeights, rememberHeight } from './height-cache';
 import { PrefetchSentinel } from './PrefetchSentinel';
+import { loadScrollOffset, saveScrollOffset } from './scroll-position';
 
 /** Fetch the next page with ~30% of the loaded height still unread. */
 export const PREFETCH_AT = 0.7;
@@ -32,6 +34,7 @@ export function VirtualTimeline({
   busy,
 }: VirtualTimelineProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
+  const restoredRef = useRef(false);
 
   const virtualizer = useWindowVirtualizer({
     count: posts.length,
@@ -56,6 +59,39 @@ export function VirtualTimeline({
     [virtualizer],
   );
 
+  // Heights load synchronously from sessionStorage inside estimateHeight.
+  // Restore offset in layout so the first paint is already at the right place.
+  useLayoutEffect(() => {
+    if (restoredRef.current || posts.length === 0) return;
+    const saved = loadScrollOffset();
+    if (saved === null || saved === 0) {
+      restoredRef.current = true;
+      return;
+    }
+    restoredRef.current = true;
+    window.scrollTo(0, saved);
+    virtualizer.scrollToOffset(saved);
+  }, [posts.length, virtualizer]);
+
+  // Persist scroll while reading; flush heights so a hard back has measurements.
+  useEffect(() => {
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        saveScrollOffset(window.scrollY);
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+      saveScrollOffset(window.scrollY);
+      flushHeights();
+    };
+  }, []);
+
   const total = virtualizer.getTotalSize();
 
   return (
@@ -66,6 +102,7 @@ export function VirtualTimeline({
       aria-label="Home timeline"
       className="relative"
       style={{ height: total }}
+      data-testid="virtual-timeline"
     >
       {posts.length > 0 ? (
         <div
