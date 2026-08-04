@@ -5,7 +5,12 @@
  * @see docs/frontend/04-modules/data-layer.md §3
  * @see docs/03-cross-cutting/api-conventions.md §3
  */
-import { useInfiniteQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { request } from '@/api-client';
 import { queryKeys } from '../keys';
 
@@ -88,4 +93,50 @@ export function useHomeTimeline(enabled = true) {
     refetchOnWindowFocus: true,
     enabled,
   });
+}
+
+/** Quiet enough to be free, frequent enough that the pill is not stale news. */
+export const NEW_POSTS_POLL_MS = 30_000;
+
+/** One page is all we fetch, so beyond it the count becomes "20+". */
+export const NEW_POSTS_MAX = TIMELINE_PAGE_SIZE;
+
+/**
+ * How many posts arrived above the one currently at the top of the list.
+ *
+ * Kept on its own query key: polling must never write into the infinite cache,
+ * because that would splice new posts into a list the user is reading.
+ */
+export function useNewPostsCount(topPostId: string | undefined) {
+  const query = useQuery({
+    queryKey: queryKeys.timelineHead(),
+    queryFn: ({ signal }) => fetchHomeTimeline(undefined, signal),
+    enabled: topPostId !== undefined,
+    refetchInterval: NEW_POSTS_POLL_MS,
+    staleTime: NEW_POSTS_POLL_MS,
+  });
+
+  const head = query.data?.data;
+  let count = 0;
+  if (topPostId !== undefined && head) {
+    const index = head.findIndex((p) => p.id === topPostId);
+    // Gone from the head entirely: at least a page of posts landed above it.
+    count = index === -1 ? head.length : index;
+  }
+
+  return { count, isFetched: query.isFetched };
+}
+
+/**
+ * Drops back to a freshly fetched first page. Used when the reader asks for the
+ * new posts — never on a timer.
+ */
+export function useRefreshHomeTimeline() {
+  const client = useQueryClient();
+  // The head poll shares the `timeline/home` prefix, so it resets alongside the
+  // list and the pill's count recomputes against the page the reader now sees.
+  return useCallback(
+    () => client.resetQueries({ queryKey: queryKeys.timelineHome() }),
+    [client],
+  );
 }

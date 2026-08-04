@@ -40,13 +40,13 @@ Sequenced from [`07-roadmap.md`](./07-roadmap.md) Phase F2 weeks 6–8. One comm
 | F2-T01 | `useHomeTimeline` infinite query + MSW timeline handler | 10 pages paginated: no duplicates, no gaps; cursor passed through opaquely; `maxPages: 10` bounds the cache | done   |
 | F2-T02 | `PostCard` + shared relative-time ticker + tombstone    | One interval for N cards; memoised; unavailable posts render identical tombstone copy                       | done   |
 | F2-T03 | `TimelineList` + skeletons + `DegradedBanner`           | Renders pages against MSW; `X-Degraded` names what is stale; skeleton matches real layout                   | done   |
-| F2-T04 | Prefetch at 70% + `NewPostsPill` polling                | Next page requested before the sentinel; new posts never auto-injected into a scrolled list                 | todo   |
+| F2-T04 | Prefetch at 70% + `NewPostsPill` polling                | Next page requested before the sentinel; new posts never auto-injected into a scrolled list                 | done   |
 | F2-T05 | Virtualisation + height cache by post ID                | `getItemKey` by ID; heights cached in `sessionStorage`; no remeasure on prepend                             | todo   |
 | F2-T06 | Scroll restoration on back-navigation                   | Heights restored **before** offset; exact offset after back from a post (risk FR3)                          | todo   |
 
 ## Active next
 
-1. F2-T04 prefetch at 70% + `NewPostsPill` polling
+1. F2-T05 virtualisation + height cache by post ID
 
 ## Notes
 

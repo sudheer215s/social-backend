@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as timeline from '@/data/queries/timeline';
 import type { Post, TimelinePage } from '@/data/queries/timeline';
-import { TimelineList } from './TimelineList';
+import { prefetchIndexFor, TimelineList } from './TimelineList';
 
 type Query = ReturnType<typeof timeline.useHomeTimeline>;
 
@@ -41,6 +41,16 @@ function mockQuery(overrides: Partial<Query>): Query {
 }
 
 describe('TimelineList (F2-T03)', () => {
+  beforeEach(() => {
+    // The polling hooks need a QueryClient; every test here drives the list
+    // through its own stubbed state instead.
+    vi.spyOn(timeline, 'useNewPostsCount').mockReturnValue({
+      count: 0,
+      isFetched: true,
+    });
+    vi.spyOn(timeline, 'useRefreshHomeTimeline').mockReturnValue(vi.fn());
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -145,5 +155,138 @@ describe('TimelineList (F2-T03)', () => {
     render(<TimelineList />);
 
     expect(screen.getByRole('feed')).toHaveAttribute('aria-busy', 'true');
+  });
+});
+
+describe('TimelineList prefetch and new posts (F2-T04)', () => {
+  let fire: (() => void)[] = [];
+
+  beforeEach(() => {
+    fire = [];
+    class StubIntersectionObserver {
+      constructor(private cb: IntersectionObserverCallback) {
+        fire.push(() =>
+          this.cb(
+            [{ isIntersecting: true } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          ),
+        );
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('IntersectionObserver', StubIntersectionObserver);
+    vi.spyOn(timeline, 'useNewPostsCount').mockReturnValue({
+      count: 0,
+      isFetched: true,
+    });
+    vi.spyOn(timeline, 'useRefreshHomeTimeline').mockReturnValue(vi.fn());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('places the sentinel 70% down the list, not at the end', () => {
+    expect(prefetchIndexFor(10)).toBe(7);
+    expect(prefetchIndexFor(20)).toBe(14);
+    expect(prefetchIndexFor(0)).toBe(-1);
+
+    vi.spyOn(timeline, 'useHomeTimeline').mockReturnValue(
+      mockQuery({
+        data: { pages: [page(0, 10)], pageParams: [] },
+        hasNextPage: true,
+      } as Partial<Query>),
+    );
+
+    render(<TimelineList />);
+
+    const nodes = Array.from(
+      screen
+        .getByRole('feed')
+        .querySelectorAll('[data-post-id], [data-testid="prefetch-sentinel"]'),
+    );
+    expect(nodes[7]).toHaveAttribute('data-testid', 'prefetch-sentinel');
+    expect(nodes[8]).toHaveAttribute('data-post-id', 'post_7');
+  });
+
+  it('fetches the next page when the sentinel comes into view', () => {
+    const fetchNextPage = vi.fn();
+    vi.spyOn(timeline, 'useHomeTimeline').mockReturnValue(
+      mockQuery({
+        data: { pages: [page(0, 10)], pageParams: [] },
+        hasNextPage: true,
+        fetchNextPage,
+      } as Partial<Query>),
+    );
+
+    render(<TimelineList />);
+    fire[0]?.();
+
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not stack requests while a page is already loading', () => {
+    const fetchNextPage = vi.fn();
+    vi.spyOn(timeline, 'useHomeTimeline').mockReturnValue(
+      mockQuery({
+        data: { pages: [page(0, 10)], pageParams: [] },
+        hasNextPage: true,
+        isFetchingNextPage: true,
+        fetchNextPage,
+      } as Partial<Query>),
+    );
+
+    render(<TimelineList />);
+    fire[0]?.();
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
+  it('announces new posts without adding them to the list', () => {
+    vi.spyOn(timeline, 'useNewPostsCount').mockReturnValue({
+      count: 3,
+      isFetched: true,
+    });
+    vi.spyOn(timeline, 'useHomeTimeline').mockReturnValue(
+      mockQuery({
+        data: { pages: [page(0, 3)], pageParams: [] },
+      } as Partial<Query>),
+    );
+
+    render(<TimelineList />);
+
+    expect(screen.getByTestId('new-posts-pill')).toHaveTextContent(
+      '3 new posts',
+    );
+    expect(
+      screen.getByRole('feed').querySelectorAll('[data-post-id]'),
+    ).toHaveLength(3);
+  });
+
+  it('reloads from the top only when the reader taps the pill', async () => {
+    const refresh = vi.fn();
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    vi.spyOn(timeline, 'useRefreshHomeTimeline').mockReturnValue(refresh);
+    vi.spyOn(timeline, 'useNewPostsCount').mockReturnValue({
+      count: 3,
+      isFetched: true,
+    });
+    vi.spyOn(timeline, 'useHomeTimeline').mockReturnValue(
+      mockQuery({
+        data: { pages: [page(0, 3)], pageParams: [] },
+      } as Partial<Query>),
+    );
+
+    render(<TimelineList />);
+    expect(refresh).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByTestId('new-posts-pill'));
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });

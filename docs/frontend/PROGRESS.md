@@ -7,9 +7,9 @@
 
 Phase F1 (Auth + shell) complete against MSW. Phase F2 (timeline read path) —
 the read path renders end to end at `/home`: data layer, `PostCard`, list,
-skeletons and the degraded banner. Remaining in F2: prefetch/new-posts pill,
-virtualisation, scroll restoration (F2-T04–T06).
-194 unit/integration tests green; `typecheck`, `lint`, `build` clean.
+skeletons, the degraded banner, prefetch and the new-posts pill. Remaining in
+F2: virtualisation and scroll restoration (F2-T05, F2-T06).
+216 unit/integration tests green; `typecheck`, `lint`, `build` clean.
 
 ### Done
 
@@ -27,11 +27,12 @@ virtualisation, scroll restoration (F2-T04–T06).
 | F2-T01     | `useHomeTimeline` + mock   | Opaque cursors; `maxPages: 10`; 250-post MSW feed          |
 | F2-T02     | `PostCard` + tombstone     | Memoised; one shared 60 s ticker for N cards               |
 | F2-T03     | `TimelineList` + degraded  | Skeletons match layout; `X-Degraded` names what is stale   |
+| F2-T04     | Prefetch + new-posts pill  | Sentinel at 70%; head polled on its own key, never merged  |
 
 ### Active next
 
-- F2-T04 prefetch at 70% + `NewPostsPill` (no auto-injection into a scrolled list)
-- Then F2-T05 virtualisation, F2-T06 scroll restoration
+- F2-T05 virtualisation + height cache by post ID
+- Then F2-T06 scroll restoration on back-navigation
 
 ### Blockers / backend asks
 
@@ -83,3 +84,12 @@ pnpm --filter @social/web build
   the 404-not-403 rule conceals.
 - `PostCard` is memoised and takes no inline object/function props; relative
   timestamps come from one module-level 60 s interval shared by every card.
+- The prefetch sentinel sits _inside_ the list at 70%, so the next page is in
+  flight while ~6 posts are still unread; "Load more" remains as the fallback
+  where `IntersectionObserver` is missing.
+- The new-posts poll lives on `['timeline','home','head']` — a separate key, so
+  a background fetch can never splice posts into the list being read. The count
+  is the index of the current top post in the fresh head page, capped at one
+  page ("20+") when that post has fallen off it.
+- The pill reloads only on an explicit tap, and scrolls to top _before_
+  resetting the query so the reader lands somewhere they recognise.
