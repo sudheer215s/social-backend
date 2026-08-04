@@ -4,33 +4,22 @@
  * Home timeline read path.
  * @see docs/frontend/04-modules/feature-modules.md — `timeline`
  */
-import { Fragment } from 'react';
 import {
   useHomeTimeline,
   useNewPostsCount,
   useRefreshHomeTimeline,
 } from '@/data/queries/timeline';
-import { PostCard } from '@/features/post';
 import { Button } from '@/ui';
 import { DegradedBanner } from './DegradedBanner';
 import { NewPostsPill } from './NewPostsPill';
-import { PrefetchSentinel } from './PrefetchSentinel';
 import { TimelineSkeleton } from './TimelineSkeleton';
-
-/** Fetch the next page with ~30% of the current one still unread. */
-export const PREFETCH_AT = 0.7;
-
-export function prefetchIndexFor(length: number): number {
-  return length === 0 ? -1 : Math.floor(length * PREFETCH_AT);
-}
+import { VirtualTimeline } from './VirtualTimeline';
 
 export function TimelineList() {
   const query = useHomeTimeline();
   const posts = (query.data?.pages ?? []).flatMap((p) => p.data);
   const { count: newPosts } = useNewPostsCount(posts[0]?.id);
   const refresh = useRefreshHomeTimeline();
-
-  const prefetchIndex = prefetchIndexFor(posts.length);
 
   function showNewPosts() {
     // Top first: the list is replaced under the reader either way, and landing
@@ -86,23 +75,12 @@ export function TimelineList() {
           </p>
         </div>
       ) : (
-        <div
-          role="feed"
-          aria-busy={query.isFetchingNextPage}
-          aria-label="Home timeline"
-        >
-          {posts.map((post, index) => (
-            <Fragment key={post.id}>
-              {index === prefetchIndex ? (
-                <PrefetchSentinel
-                  onReach={reachedPrefetchPoint}
-                  disabled={!query.hasNextPage}
-                />
-              ) : null}
-              <PostCard post={post} />
-            </Fragment>
-          ))}
-        </div>
+        <VirtualTimeline
+          posts={posts}
+          onReachPrefetchPoint={reachedPrefetchPoint}
+          prefetchDisabled={!query.hasNextPage}
+          busy={query.isFetchingNextPage}
+        />
       )}
 
       {query.hasNextPage ? (

@@ -5,34 +5,33 @@
 
 ## Status
 
-Phase F1 (Auth + shell) complete against MSW. Phase F2 (timeline read path) —
-the read path renders end to end at `/home`: data layer, `PostCard`, list,
-skeletons, the degraded banner, prefetch and the new-posts pill. Remaining in
-F2: virtualisation and scroll restoration (F2-T05, F2-T06).
-216 unit/integration tests green; `typecheck`, `lint`, `build` clean.
+Phase F1 (Auth + shell) complete against MSW. Phase F2 timeline read path is
+almost closed: data layer through virtualised feed with height cache by post
+ID. Remaining: scroll restoration (F2-T06).
+235 unit/integration tests green; `typecheck`, `lint`, `build` clean.
 
 ### Done
 
-| ID         | Summary                    | Notes                                                      |
-| ---------- | -------------------------- | ---------------------------------------------------------- |
-| F0-T01–T09 | Foundation complete        | Next.js, tokens, ESLint, OpenAPI, api-client, MSW, UI seed |
-| F1-T01     | Session machine + boundary | Pure reducer + Zustand + boot silent refresh               |
-| F1-T02     | Login / register forms     | RHF+Zod; mapAuthError anti-enumeration                     |
-| F1-T03     | RequireAuth + `?next=`     | Open-redirect safe; `/login?next=` on anonymous app routes |
-| F1-T04     | Logout + UnverifiedGate    | Fire-and-forget logout; verify banner; app shell nav       |
-| F1-T05a    | Password/verify data layer | Enumeration-safe forgot; `mapTokenActionError`             |
-| F1-T05b    | Forgot-password UI         | `/forgot-password`; unconditional acknowledgement          |
-| F1-T05c    | Reset-password UI          | `/reset-password?token=`; missing token = expired token    |
-| F1-T05d    | Verify-email UI + MSW      | `/verify-email?token=`; invalidates `me` so gates unlock   |
-| F2-T01     | `useHomeTimeline` + mock   | Opaque cursors; `maxPages: 10`; 250-post MSW feed          |
-| F2-T02     | `PostCard` + tombstone     | Memoised; one shared 60 s ticker for N cards               |
-| F2-T03     | `TimelineList` + degraded  | Skeletons match layout; `X-Degraded` names what is stale   |
-| F2-T04     | Prefetch + new-posts pill  | Sentinel at 70%; head polled on its own key, never merged  |
+| ID         | Summary                    | Notes                                                         |
+| ---------- | -------------------------- | ------------------------------------------------------------- |
+| F0-T01–T09 | Foundation complete        | Next.js, tokens, ESLint, OpenAPI, api-client, MSW, UI seed    |
+| F1-T01     | Session machine + boundary | Pure reducer + Zustand + boot silent refresh                  |
+| F1-T02     | Login / register forms     | RHF+Zod; mapAuthError anti-enumeration                        |
+| F1-T03     | RequireAuth + `?next=`     | Open-redirect safe; `/login?next=` on anonymous app routes    |
+| F1-T04     | Logout + UnverifiedGate    | Fire-and-forget logout; verify banner; app shell nav          |
+| F1-T05a    | Password/verify data layer | Enumeration-safe forgot; `mapTokenActionError`                |
+| F1-T05b    | Forgot-password UI         | `/forgot-password`; unconditional acknowledgement             |
+| F1-T05c    | Reset-password UI          | `/reset-password?token=`; missing token = expired token       |
+| F1-T05d    | Verify-email UI + MSW      | `/verify-email?token=`; invalidates `me` so gates unlock      |
+| F2-T01     | `useHomeTimeline` + mock   | Opaque cursors; `maxPages: 10`; 250-post MSW feed             |
+| F2-T02     | `PostCard` + tombstone     | Memoised; one shared 60 s ticker for N cards                  |
+| F2-T03     | `TimelineList` + degraded  | Skeletons match layout; `X-Degraded` names what is stale      |
+| F2-T04     | Prefetch + new-posts pill  | Sentinel at 70%; head polled on its own key, never merged     |
+| F2-T05     | VirtualTimeline + heights  | `getItemKey` by ID; sessionStorage height cache; windowed DOM |
 
 ### Active next
 
-- F2-T05 virtualisation + height cache by post ID
-- Then F2-T06 scroll restoration on back-navigation
+- F2-T06 scroll restoration on back-navigation
 
 ### Blockers / backend asks
 
@@ -93,3 +92,6 @@ pnpm --filter @social/web build
   page ("20+") when that post has fallen off it.
 - The pill reloads only on an explicit tap, and scrolls to top _before_
   resetting the query so the reader lands somewhere they recognise.
+- Virtualisation uses TanStack Virtual with `getItemKey` by post ID and
+  measured heights persisted in `sessionStorage` (LRU-ish trim at 400 entries).
+  Estimates fill in until a card is measured; prepends do not wipe prior heights.

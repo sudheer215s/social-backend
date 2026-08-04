@@ -7,6 +7,9 @@ import { useRelativeTime } from './useRelativeTime';
 
 export type PostCardProps = {
   post: Post;
+  /** Position in the *logical* feed — the DOM only holds a window of it. */
+  posInSet?: number;
+  setSize?: number;
 };
 
 /**
@@ -14,7 +17,7 @@ export type PostCardProps = {
  * function props, and timestamps driven by one shared interval.
  * @see docs/frontend/04-modules/feature-modules.md — `post`
  */
-function PostCardImpl({ post }: PostCardProps) {
+function PostCardImpl({ post, posInSet, setSize }: PostCardProps) {
   const relative = useRelativeTime(post.created_at);
 
   if (post.unavailable) return <DeletedPostTombstone />;
@@ -24,6 +27,8 @@ function PostCardImpl({ post }: PostCardProps) {
   return (
     <article
       data-post-id={post.id}
+      aria-posinset={posInSet}
+      aria-setsize={setSize}
       className="border-b border-border px-4 py-3"
     >
       <div className="flex items-baseline gap-2 text-sm">

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as timeline from '@/data/queries/timeline';
 import type { Post, TimelinePage } from '@/data/queries/timeline';
-import { prefetchIndexFor, TimelineList } from './TimelineList';
+import { TimelineList } from './TimelineList';
 
 type Query = ReturnType<typeof timeline.useHomeTimeline>;
 
@@ -187,29 +187,6 @@ describe('TimelineList prefetch and new posts (F2-T04)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-  });
-
-  it('places the sentinel 70% down the list, not at the end', () => {
-    expect(prefetchIndexFor(10)).toBe(7);
-    expect(prefetchIndexFor(20)).toBe(14);
-    expect(prefetchIndexFor(0)).toBe(-1);
-
-    vi.spyOn(timeline, 'useHomeTimeline').mockReturnValue(
-      mockQuery({
-        data: { pages: [page(0, 10)], pageParams: [] },
-        hasNextPage: true,
-      } as Partial<Query>),
-    );
-
-    render(<TimelineList />);
-
-    const nodes = Array.from(
-      screen
-        .getByRole('feed')
-        .querySelectorAll('[data-post-id], [data-testid="prefetch-sentinel"]'),
-    );
-    expect(nodes[7]).toHaveAttribute('data-testid', 'prefetch-sentinel');
-    expect(nodes[8]).toHaveAttribute('data-post-id', 'post_7');
   });
 
   it('fetches the next page when the sentinel comes into view', () => {

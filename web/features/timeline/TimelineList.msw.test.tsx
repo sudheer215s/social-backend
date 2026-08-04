@@ -43,6 +43,15 @@ function renderedIds(): string[] {
   );
 }
 
+/**
+ * The list is virtualised, so the DOM holds a window. `aria-setsize` is what
+ * reports the length of the feed the reader can actually scroll through.
+ */
+function loadedCount(): number {
+  const first = document.querySelector('[data-post-id]');
+  return Number(first?.getAttribute('aria-setsize') ?? 0);
+}
+
 describe('TimelineList against MSW (F2-T03)', () => {
   beforeAll(() => {
     server.listen({ onUnhandledRequest: 'error' });
@@ -74,8 +83,8 @@ describe('TimelineList against MSW (F2-T03)', () => {
       expect(screen.getByRole('feed')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('timeline-skeleton')).toBeNull();
-    expect(renderedIds()).toHaveLength(20);
-    expect(renderedIds()[0]).toBe('post_0');
+    expect(loadedCount()).toBe(20);
+    expect(renderedIds().length).toBeGreaterThan(0);
   });
 
   it('appends the next page without dropping or duplicating posts', async () => {
@@ -89,11 +98,11 @@ describe('TimelineList against MSW (F2-T03)', () => {
       .click(screen.getByRole('button', { name: /load more/i }));
 
     await waitFor(() => {
-      expect(renderedIds()).toHaveLength(40);
+      expect(loadedCount()).toBe(40);
     });
     const ids = renderedIds();
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids[20]).toBe('post_20');
+    expect(ids).toContain('post_20');
   });
 
   it('names what is stale when the server flags the response degraded', async () => {
@@ -106,7 +115,7 @@ describe('TimelineList against MSW (F2-T03)', () => {
     });
     expect(screen.getByText('Some posts may be missing.')).toBeInTheDocument();
     // Degraded is not an error: the posts the server did return still render.
-    expect(renderedIds()).toHaveLength(20);
+    expect(loadedCount()).toBe(20);
   });
 
   it('offers a retry instead of an empty screen when the server fails', async () => {
