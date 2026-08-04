@@ -40,6 +40,62 @@ function resolveDeadline(d: RequestOptions['deadline']): number {
   return DEADLINES[d];
 }
 
+/**
+ * jsdom installs its own `AbortSignal`, which then fails the `instanceof` brand
+ * check inside undici's fetch — the request is rejected before it is ever sent.
+ * Probe the Request/AbortSignal pairing (same webidl conversion, no network)
+ * and fall back to {@link abortRace} when the two realms do not match.
+ */
+let signalProbe: { request: unknown; signal: unknown; ok: boolean } | null =
+  null;
+
+function canForwardSignal(signal: AbortSignal): boolean {
+  if (typeof Request !== 'function') return false;
+  const signalCtor = signal.constructor;
+  if (
+    signalProbe &&
+    signalProbe.request === Request &&
+    signalProbe.signal === signalCtor
+  ) {
+    return signalProbe.ok;
+  }
+  let ok = true;
+  try {
+    void new Request('http://localhost/', { signal });
+  } catch {
+    ok = false;
+  }
+  signalProbe = { request: Request, signal: signalCtor, ok };
+  return ok;
+}
+
+/**
+ * Caller cancellation for realms where the signal cannot reach fetch. The
+ * socket stays open until the response arrives, but the caller's promise
+ * rejects on abort exactly as it would with a forwarded signal.
+ */
+function abortRace(signal: AbortSignal): {
+  promise: Promise<never>;
+  release: () => void;
+} {
+  let onAbort: (() => void) | undefined;
+  const promise = new Promise<never>((_resolve, reject) => {
+    const fail = () => reject(new NetworkError('aborted'));
+    if (signal.aborted) {
+      fail();
+      return;
+    }
+    onAbort = fail;
+    signal.addEventListener('abort', fail, { once: true });
+  });
+  return {
+    promise,
+    release: () => {
+      if (onAbort) signal.removeEventListener('abort', onAbort);
+    },
+  };
+}
+
 function resolveBaseUrl(override?: string): string {
   if (override !== undefined) return override.replace(/\/$/, '');
   const fromEnv =
@@ -95,16 +151,22 @@ export async function request<T = unknown>(
 
     let res: Response;
     let timedOut = false;
+    let abort: ReturnType<typeof abortRace> | undefined;
     try {
       const init: RequestInit = {
         method,
         headers,
         credentials: options.public ? 'omit' : 'include',
       };
-      // Only forward caller AbortSignal (same realm). Deadlines use Promise.race
-      // so jsdom + MSW undici do not fight over AbortSignal instanceof checks.
+      // Only forward caller AbortSignal when fetch's realm will accept it.
+      // Deadlines use Promise.race so jsdom + MSW undici do not fight over
+      // AbortSignal instanceof checks.
       if (options.signal) {
-        init.signal = options.signal;
+        if (canForwardSignal(options.signal)) {
+          init.signal = options.signal;
+        } else {
+          abort = abortRace(options.signal);
+        }
       }
       if (body !== undefined) {
         init.body = body;
@@ -116,6 +178,7 @@ export async function request<T = unknown>(
           timedOut = true;
           throw new TimeoutError();
         }),
+        ...(abort ? [abort.promise] : []),
       ]);
     } catch (err) {
       if (err instanceof TimeoutError || timedOut) {
@@ -139,6 +202,8 @@ export async function request<T = unknown>(
       throw err instanceof NetworkError
         ? err
         : new NetworkError(err instanceof Error ? err.message : 'fetch failed');
+    } finally {
+      abort?.release();
     }
 
     extractSideChannel(res.headers, options.rateLimitScope ?? path);

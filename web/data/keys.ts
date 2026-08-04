@@ -5,4 +5,6 @@
 export const queryKeys = {
   session: ['session'] as const,
   me: ['me'] as const,
+  timelineHome: () => ['timeline', 'home'] as const,
+  timelineUser: (id: string) => ['timeline', 'user', id] as const,
 };

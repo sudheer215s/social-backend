@@ -91,6 +91,91 @@ describe('request pipeline (F0-T06)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  // React Query hands every queryFn an AbortSignal minted by whichever realm
+  // owns the global — under jsdom that is not the one undici's fetch checks.
+  describe('caller AbortSignal', () => {
+    /** Stands in for a fetch realm that accepts (or rejects) foreign signals. */
+    function stubRequest(accepts: boolean) {
+      vi.stubGlobal(
+        'Request',
+        class StubRequest {
+          constructor(_url: string, init?: { signal?: unknown }) {
+            if (init?.signal && !accepts) {
+              throw new TypeError(
+                'Expected signal ("AbortSignal {}") to be an instance of AbortSignal.',
+              );
+            }
+          }
+        },
+      );
+    }
+
+    it('forwards the signal when fetch would accept it', async () => {
+      stubRequest(true);
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+      const controller = new AbortController();
+
+      await request('/v1/me', {
+        fetch: fetchMock,
+        baseUrl: 'http://api.test',
+        public: true,
+        signal: controller.signal,
+      });
+
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      expect(init.signal).toBe(controller.signal);
+    });
+
+    it('completes the request when the signal cannot cross realms', async () => {
+      stubRequest(false);
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+      const controller = new AbortController();
+
+      const result = await request('/v1/me', {
+        fetch: fetchMock,
+        baseUrl: 'http://api.test',
+        public: true,
+        signal: controller.signal,
+      });
+
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      expect(init.signal).toBeUndefined();
+      expect(result.data).toEqual({ ok: true });
+    });
+
+    it('still rejects on abort when the signal was not forwarded', async () => {
+      stubRequest(false);
+      const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
+      const controller = new AbortController();
+
+      const pending = request('/v1/me', {
+        fetch: fetchMock as unknown as typeof fetch,
+        baseUrl: 'http://api.test',
+        public: true,
+        signal: controller.signal,
+      });
+      controller.abort();
+
+      await expect(pending).rejects.toBeInstanceOf(NetworkError);
+    });
+
+    it('rejects immediately when handed an already-aborted signal', async () => {
+      stubRequest(false);
+      const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        request('/v1/me', {
+          fetch: fetchMock as unknown as typeof fetch,
+          baseUrl: 'http://api.test',
+          public: true,
+          signal: controller.signal,
+        }),
+      ).rejects.toBeInstanceOf(NetworkError);
+    });
+  });
+
   it('does not retry POST without idempotency key on 503', async () => {
     const fetchMock = vi
       .fn()
